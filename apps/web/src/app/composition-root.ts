@@ -1,4 +1,5 @@
 import { loadEnv, validateEnv } from '../core/env.ts';
+import { initFirebase } from '../core/firebase.ts';
 import type { AppEnv } from '../core/module-system.ts';
 
 let appEnv: AppEnv | null = null;
@@ -7,6 +8,7 @@ export function initApp(): AppEnv {
   if (appEnv) return appEnv;
   appEnv = loadEnv();
   validateEnv(appEnv);
+  initFirebase(appEnv);
   return appEnv;
 }
 

@@ -7,6 +7,7 @@
     "build": "bun run --cwd apps/web build",
     "typecheck": "bun run --cwd apps/web typecheck",
     "lint": "bun run --cwd apps/web lint",
+    "deploy": "bun run build && firebase deploy --only hosting --config firebase/firebase.json --project collabboard-dev-9f339",
     "emulators": "firebase emulators:start --config firebase/firebase.json --project collabboard-dev-9f339",
     "emulators:export": "firebase emulators:export ./firebase/emulator-data --config firebase/firebase.json --project collabboard-dev-9f339"
   }

@@ -1,8 +1,8 @@
-Start with meticulously reviewing the following files.
+Start with meticulously reviewing the following files:
 
 - AGENTS.md
-- COLLABBOARD_CORE.md
-- PLAN_CODEX.md
+- docs/COLLABBOARD_CORE.md
+- docs/PLAN_CLAUDE.md
 - README.md
 
-Then, proceed with implementing the next task.
+Do NOT start implementing anything unless the user specified so.

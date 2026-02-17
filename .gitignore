@@ -5,6 +5,8 @@ dist
 .env.local
 *.local
 firebase/emulator-data
+firebase/public
+firebase/.firebase
 firestore-debug.log
 firebase-debug.log
 database-debug.log
