@@ -1,1 +1,1 @@
-// collab-protocol module public API
+export type { BoardOperation, ObjectOperationType } from './contracts.ts';

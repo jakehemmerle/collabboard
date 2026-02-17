@@ -6,6 +6,7 @@ import { permissionsModule } from '../modules/permissions/index.ts';
 import { authModule } from '../modules/auth/index.ts';
 import { boardAccessModule } from '../modules/board-access/index.ts';
 import { viewportModule } from '../modules/viewport/index.ts';
+import { objectsModule } from '../modules/objects/index.ts';
 
 let appEnv: AppEnv | null = null;
 
@@ -19,6 +20,7 @@ export async function initApp(): Promise<AppEnv> {
   registerModule(authModule);
   registerModule(boardAccessModule);
   registerModule(viewportModule);
+  registerModule(objectsModule);
   await initModules({ env: appEnv });
 
   return appEnv;

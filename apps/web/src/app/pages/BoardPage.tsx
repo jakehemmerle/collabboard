@@ -1,12 +1,20 @@
 import { useParams } from 'react-router';
-import { Stage, Layer, Rect, Text } from 'react-konva';
-import { useEffect, useState } from 'react';
+import { Stage, Layer } from 'react-konva';
+import { useEffect, useState, useCallback } from 'react';
 import { getModuleApi } from '../module-registry.ts';
 import { BOARD_ACCESS_MODULE_ID } from '../../modules/board-access/index.ts';
 import type { BoardAccessApi } from '../../modules/board-access/contracts.ts';
 import { useAuth } from '../../modules/auth/ui/useAuth.ts';
 import { useViewport } from '../../modules/viewport/ui/useViewport.ts';
 import { BackgroundGrid } from '../../modules/viewport/ui/BackgroundGrid.tsx';
+import { useObjects } from '../../modules/objects/ui/useObjects.ts';
+import { StickyNoteShape } from '../../modules/objects/ui/StickyNoteShape.tsx';
+import { RectangleShape } from '../../modules/objects/ui/RectangleShape.tsx';
+import { TextEditor } from '../../modules/objects/ui/TextEditor.tsx';
+import { Toolbar } from '../../modules/objects/ui/Toolbar.tsx';
+import type { StickyNote } from '../../modules/objects/contracts.ts';
+import type { ViewportApi } from '../../modules/viewport/contracts.ts';
+import { VIEWPORT_MODULE_ID } from '../../modules/viewport/index.ts';
 
 type BoardState =
   | { status: 'loading' }
@@ -37,12 +45,10 @@ export function BoardPage() {
       try {
         const api = getModuleApi<BoardAccessApi>(BOARD_ACCESS_MODULE_ID);
 
-        // canAccess reads the board doc and checks membership in one call
         const canRead = await api.canAccess(id!, 'board:read');
         if (cancelled) return;
 
         if (!canRead) {
-          // Distinguish not-found from unauthorized
           const board = await api.getBoard(id!);
           if (cancelled) return;
           setBoardState(board ? { status: 'unauthorized' } : { status: 'not-found' });
@@ -76,21 +82,132 @@ export function BoardPage() {
     return <CenteredMessage>Error: {boardState.message}</CenteredMessage>;
   }
 
-  return <BoardCanvas boardId={id!} width={dimensions.width} height={dimensions.height} />;
+  return <BoardCanvas width={dimensions.width} height={dimensions.height} />;
 }
 
-function BoardCanvas({ boardId, width, height }: { boardId: string; width: number; height: number }) {
+function BoardCanvas({ width, height }: { width: number; height: number }) {
   const { camera, stageProps, resetView } = useViewport();
+  const {
+    objects,
+    selectedId,
+    createSticky,
+    createRectangle,
+    moveObject,
+    updateText,
+    updateColor,
+    deleteObject,
+    selectObject,
+    deselectAll,
+  } = useObjects();
+
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  const selectedObj = selectedId !== null
+    ? objects.find((o) => o.id === selectedId) ?? null
+    : null;
+
+  const editingObj = editingId !== null
+    ? (objects.find((o) => o.id === editingId && o.type === 'sticky') as StickyNote | undefined)
+    : undefined;
+
+  function getViewportCenter() {
+    const vp = getModuleApi<ViewportApi>(VIEWPORT_MODULE_ID);
+    return vp.screenToWorld({ x: width / 2, y: height / 2 });
+  }
+
+  function handleCreateSticky() {
+    const center = getViewportCenter();
+    createSticky(center.x - 100, center.y - 75);
+  }
+
+  function handleCreateRectangle() {
+    const center = getViewportCenter();
+    createRectangle(center.x - 100, center.y - 75);
+  }
+
+  function handleChangeColor(color: string) {
+    if (selectedObj) updateColor(selectedObj.id, color);
+  }
+
+  function handleDelete() {
+    if (selectedObj) deleteObject(selectedObj.id);
+  }
+
+  const handleTextSave = useCallback(
+    (text: string) => {
+      if (editingId) updateText(editingId, text);
+      setEditingId(null);
+    },
+    [editingId, updateText],
+  );
+
+  const handleTextCancel = useCallback(() => {
+    setEditingId(null);
+  }, []);
 
   return (
     <div style={{ width: '100vw', height: '100vh', overflow: 'hidden' }}>
-      <Stage width={width} height={height} {...stageProps}>
+      <Stage
+        width={width}
+        height={height}
+        {...stageProps}
+        onClick={(e) => { if (e.target === e.target.getStage()) deselectAll(); }}
+      >
         <BackgroundGrid camera={camera} width={width} height={height} />
         <Layer>
-          <Rect x={20} y={20} width={200} height={100} fill="#f0f0f0" stroke="#ccc" strokeWidth={1} cornerRadius={4} />
-          <Text x={30} y={50} text={`Board: ${boardId}`} fontSize={16} fill="#333" />
+          {objects.map((obj) => {
+            if (obj.type === 'sticky') {
+              return (
+                <StickyNoteShape
+                  key={obj.id}
+                  obj={obj}
+                  isSelected={obj.id === selectedId}
+                  onSelect={() => selectObject(obj.id)}
+                  onDragEnd={(x, y) => moveObject(obj.id, x, y)}
+                  onDblClick={() => setEditingId(obj.id)}
+                />
+              );
+            }
+
+            if (obj.type === 'rectangle') {
+              return (
+                <RectangleShape
+                  key={obj.id}
+                  obj={obj}
+                  isSelected={obj.id === selectedId}
+                  onSelect={() => selectObject(obj.id)}
+                  onDragEnd={(x, y) => moveObject(obj.id, x, y)}
+                />
+              );
+            }
+
+            return null;
+          })}
         </Layer>
       </Stage>
+
+      {editingObj && (
+        <TextEditor
+          obj={editingObj}
+          camera={camera}
+          onSave={handleTextSave}
+          onCancel={handleTextCancel}
+        />
+      )}
+
+      <Toolbar
+        selectedType={selectedObj?.type ?? null}
+        selectedColor={
+          selectedObj
+            ? selectedObj.type === 'sticky' ? selectedObj.color : selectedObj.fill
+            : null
+        }
+        onCreateSticky={handleCreateSticky}
+        onCreateRectangle={handleCreateRectangle}
+        onChangeColor={handleChangeColor}
+        onDelete={handleDelete}
+      />
+
       <button
         onClick={resetView}
         style={{
