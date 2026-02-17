@@ -1,0 +1,16 @@
+import { loadEnv, validateEnv } from '../core/env.ts';
+import type { AppEnv } from '../core/module-system.ts';
+
+let appEnv: AppEnv | null = null;
+
+export function initApp(): AppEnv {
+  if (appEnv) return appEnv;
+  appEnv = loadEnv();
+  validateEnv(appEnv);
+  return appEnv;
+}
+
+export function getEnv(): AppEnv {
+  if (!appEnv) throw new Error('App not initialized. Call initApp() first.');
+  return appEnv;
+}
