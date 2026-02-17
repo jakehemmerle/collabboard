@@ -3,10 +3,10 @@ import { createRoot } from 'react-dom/client';
 import { App } from './App.tsx';
 import { initApp } from './composition-root.ts';
 
-initApp();
-
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-);
+initApp().then(() => {
+  createRoot(document.getElementById('root')!).render(
+    <StrictMode>
+      <App />
+    </StrictMode>,
+  );
+});
