@@ -7,6 +7,9 @@ import { authModule } from '../modules/auth/index.ts';
 import { boardAccessModule } from '../modules/board-access/index.ts';
 import { viewportModule } from '../modules/viewport/index.ts';
 import { objectsModule } from '../modules/objects/index.ts';
+import { syncModule } from '../modules/sync/index.ts';
+import { boardSessionModule } from '../modules/board-session/index.ts';
+import { presenceModule } from '../modules/presence/index.ts';
 
 let appEnv: AppEnv | null = null;
 
@@ -21,6 +24,9 @@ export async function initApp(): Promise<AppEnv> {
   registerModule(boardAccessModule);
   registerModule(viewportModule);
   registerModule(objectsModule);
+  registerModule(syncModule);
+  registerModule(boardSessionModule);
+  registerModule(presenceModule);
   await initModules({ env: appEnv });
 
   return appEnv;

@@ -1,6 +1,6 @@
 import { useParams } from 'react-router';
 import { Stage, Layer } from 'react-konva';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { getModuleApi } from '../module-registry.ts';
 import { BOARD_ACCESS_MODULE_ID } from '../../modules/board-access/index.ts';
 import type { BoardAccessApi } from '../../modules/board-access/contracts.ts';
@@ -15,6 +15,13 @@ import { Toolbar } from '../../modules/objects/ui/Toolbar.tsx';
 import type { StickyNote } from '../../modules/objects/contracts.ts';
 import type { ViewportApi } from '../../modules/viewport/contracts.ts';
 import { VIEWPORT_MODULE_ID } from '../../modules/viewport/index.ts';
+import type { BoardSessionApi } from '../../modules/board-session/contracts.ts';
+import { BOARD_SESSION_MODULE_ID } from '../../modules/board-session/index.ts';
+import type { PresenceApi } from '../../modules/presence/contracts.ts';
+import { PRESENCE_MODULE_ID } from '../../modules/presence/index.ts';
+import { CursorLayer } from '../../modules/presence/ui/CursorLayer.tsx';
+import { PresenceRoster } from '../../modules/presence/ui/PresenceRoster.tsx';
+import type Konva from 'konva';
 
 type BoardState =
   | { status: 'loading' }
@@ -82,10 +89,11 @@ export function BoardPage() {
     return <CenteredMessage>Error: {boardState.message}</CenteredMessage>;
   }
 
-  return <BoardCanvas width={dimensions.width} height={dimensions.height} />;
+  return <BoardCanvas boardId={id!} width={dimensions.width} height={dimensions.height} />;
 }
 
-function BoardCanvas({ width, height }: { width: number; height: number }) {
+function BoardCanvas({ boardId, width, height }: { boardId: string; width: number; height: number }) {
+  const { user } = useAuth();
   const { camera, stageProps, resetView } = useViewport();
   const {
     objects,
@@ -101,6 +109,83 @@ function BoardCanvas({ width, height }: { width: number; height: number }) {
   } = useObjects();
 
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [sessionReady, setSessionReady] = useState(false);
+  const presenceRef = useRef<PresenceApi | null>(null);
+
+  // Throttled drag-move: buffer latest position per objectId, flush every 100ms
+  const dragBufferRef = useRef<Map<string, { x: number; y: number }>>(new Map());
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const buf = dragBufferRef.current;
+      if (buf.size === 0) return;
+      for (const [objectId, pos] of buf) {
+        moveObject(objectId, pos.x, pos.y);
+      }
+      buf.clear();
+    }, 100);
+    return () => clearInterval(timer);
+  }, [moveObject]);
+
+  const handleDragMove = useCallback((objectId: string, x: number, y: number) => {
+    dragBufferRef.current.set(objectId, { x, y });
+  }, []);
+
+  // Board session lifecycle: enter on mount, leave on unmount
+  useEffect(() => {
+    let cancelled = false;
+
+    async function enterSession() {
+      try {
+        const sessionApi = getModuleApi<BoardSessionApi>(BOARD_SESSION_MODULE_ID);
+        await sessionApi.enter(boardId);
+        if (cancelled) return;
+        setSessionReady(true);
+      } catch (err) {
+        console.error('[BoardPage] Failed to enter board session:', err);
+      }
+    }
+
+    enterSession();
+
+    return () => {
+      cancelled = true;
+      const sessionApi = getModuleApi<BoardSessionApi>(BOARD_SESSION_MODULE_ID);
+      sessionApi.leave().catch((err) => {
+        console.error('[BoardPage] Failed to leave board session:', err);
+      });
+    };
+  }, [boardId]);
+
+  // Presence lifecycle: start after session is ready, stop on unmount
+  useEffect(() => {
+    if (!sessionReady || !user) return;
+
+    let cancelled = false;
+    const presenceApi = getModuleApi<PresenceApi>(PRESENCE_MODULE_ID);
+    presenceRef.current = presenceApi;
+
+    async function startPresence() {
+      try {
+        await presenceApi.start(boardId, {
+          uid: user!.uid,
+          displayName: user!.displayName ?? user!.email ?? 'Anonymous',
+          photoURL: user!.photoURL ?? null,
+        });
+      } catch (err) {
+        if (!cancelled) console.error('[BoardPage] Failed to start presence:', err);
+      }
+    }
+
+    startPresence();
+
+    return () => {
+      cancelled = true;
+      presenceRef.current = null;
+      presenceApi.stop().catch((err) => {
+        console.error('[BoardPage] Failed to stop presence:', err);
+      });
+    };
+  }, [sessionReady, user, boardId]);
 
   const selectedObj = selectedId !== null
     ? objects.find((o) => o.id === selectedId) ?? null
@@ -145,6 +230,22 @@ function BoardCanvas({ width, height }: { width: number; height: number }) {
     setEditingId(null);
   }, []);
 
+  // Publish cursor position on mouse move (world coordinates)
+  const handleMouseMove = useCallback(
+    (e: Konva.KonvaEventObject<MouseEvent>) => {
+      const api = presenceRef.current;
+      if (!api) return;
+      const stage = e.target.getStage();
+      if (!stage) return;
+      const pointer = stage.getPointerPosition();
+      if (!pointer) return;
+      const vp = getModuleApi<ViewportApi>(VIEWPORT_MODULE_ID);
+      const world = vp.screenToWorld({ x: pointer.x, y: pointer.y });
+      api.publishCursor(world);
+    },
+    [],
+  );
+
   return (
     <div style={{ width: '100vw', height: '100vh', overflow: 'hidden' }}>
       <Stage
@@ -152,6 +253,7 @@ function BoardCanvas({ width, height }: { width: number; height: number }) {
         height={height}
         {...stageProps}
         onClick={(e) => { if (e.target === e.target.getStage()) deselectAll(); }}
+        onMouseMove={handleMouseMove}
       >
         <BackgroundGrid camera={camera} width={width} height={height} />
         <Layer>
@@ -163,6 +265,7 @@ function BoardCanvas({ width, height }: { width: number; height: number }) {
                   obj={obj}
                   isSelected={obj.id === selectedId}
                   onSelect={() => selectObject(obj.id)}
+                  onDragMove={(x, y) => handleDragMove(obj.id, x, y)}
                   onDragEnd={(x, y) => moveObject(obj.id, x, y)}
                   onDblClick={() => setEditingId(obj.id)}
                 />
@@ -176,6 +279,7 @@ function BoardCanvas({ width, height }: { width: number; height: number }) {
                   obj={obj}
                   isSelected={obj.id === selectedId}
                   onSelect={() => selectObject(obj.id)}
+                  onDragMove={(x, y) => handleDragMove(obj.id, x, y)}
                   onDragEnd={(x, y) => moveObject(obj.id, x, y)}
                 />
               );
@@ -184,6 +288,7 @@ function BoardCanvas({ width, height }: { width: number; height: number }) {
             return null;
           })}
         </Layer>
+        <CursorLayer />
       </Stage>
 
       {editingObj && (
@@ -207,6 +312,8 @@ function BoardCanvas({ width, height }: { width: number; height: number }) {
         onChangeColor={handleChangeColor}
         onDelete={handleDelete}
       />
+
+      <PresenceRoster />
 
       <button
         onClick={resetView}

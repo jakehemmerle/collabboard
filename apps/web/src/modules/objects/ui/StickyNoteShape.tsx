@@ -8,6 +8,7 @@ interface StickyNoteShapeProps {
   obj: StickyNote;
   isSelected: boolean;
   onSelect: () => void;
+  onDragMove?: (x: number, y: number) => void;
   onDragEnd: (x: number, y: number) => void;
   onDblClick: () => void;
 }
@@ -16,10 +17,18 @@ export const StickyNoteShape = React.memo(function StickyNoteShape({
   obj,
   isSelected,
   onSelect,
+  onDragMove,
   onDragEnd,
   onDblClick,
 }: StickyNoteShapeProps) {
   const fill = STICKY_COLORS[obj.color] ?? STICKY_COLORS.yellow;
+
+  function handleDragMove(e: Konva.KonvaEventObject<DragEvent>) {
+    if (onDragMove) {
+      const node = e.target;
+      onDragMove(node.x(), node.y());
+    }
+  }
 
   function handleDragEnd(e: Konva.KonvaEventObject<DragEvent>) {
     const node = e.target;
@@ -33,6 +42,7 @@ export const StickyNoteShape = React.memo(function StickyNoteShape({
       draggable
       onClick={onSelect}
       onTap={onSelect}
+      onDragMove={handleDragMove}
       onDragEnd={handleDragEnd}
       onDblClick={onDblClick}
       onDblTap={onDblClick}

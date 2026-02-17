@@ -71,6 +71,8 @@ export interface ObjectsState {
 
 export interface ObjectsApi {
   applyLocal(intent: ObjectIntent): ApplyResult;
+  applyRemote(event: { type: 'added' | 'modified' | 'removed'; objectId: string; data: Record<string, unknown> | null }): void;
+  hydrateFromSnapshot(objects: BoardObject[]): void;
   select(objectId: string | null): void;
   getSnapshot(): ObjectsState;
   observeObjects(cb: (state: ObjectsState) => void): () => void;
