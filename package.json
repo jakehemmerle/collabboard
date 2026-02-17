@@ -1,7 +1,6 @@
 {
   "name": "collabboard",
   "private": true,
-  "workspaces": ["apps/web"],
   "scripts": {
     "dev": "bun run --cwd apps/web dev",
     "build": "bun run --cwd apps/web build",
@@ -10,5 +9,6 @@
     "deploy": "bun run build && firebase deploy --only hosting --config firebase/firebase.json --project collabboard-dev-9f339",
     "emulators": "firebase emulators:start --config firebase/firebase.json --project collabboard-dev-9f339",
     "emulators:export": "firebase emulators:export ./firebase/emulator-data --config firebase/firebase.json --project collabboard-dev-9f339"
-  }
+  },
+  "workspaces": ["apps/web"]
 }
