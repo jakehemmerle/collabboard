@@ -16,7 +16,9 @@ import { TextShape } from '../../modules/objects/ui/TextShape.tsx';
 import { TextEditor } from '../../modules/objects/ui/TextEditor.tsx';
 import { Toolbar } from '../../modules/objects/ui/Toolbar.tsx';
 import { SelectionBox } from '../../modules/objects/ui/SelectionBox.tsx';
-import { getSelectionBoxBounds, isObjectInBounds } from '../../modules/objects/domain/geometry.ts';
+import { getSelectionBoxBounds, isObjectInBounds, getBoundingBox } from '../../modules/objects/domain/geometry.ts';
+import type { BoundingBox } from '../../modules/objects/domain/geometry.ts';
+import { TransformHandles } from '../../modules/objects/ui/TransformHandles.tsx';
 import type { StickyNote, TextObject } from '../../modules/objects/contracts.ts';
 import type { ViewportApi } from '../../modules/viewport/contracts.ts';
 import { VIEWPORT_MODULE_ID } from '../../modules/viewport/index.ts';
@@ -114,6 +116,7 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
     createLine,
     createText,
     moveObject,
+    resizeObject,
     updateText,
     updateColor,
     deleteObject,
@@ -239,6 +242,28 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
 
   const selectedObjs = objects.filter((o) => selectedIds.includes(o.id));
   const firstSelected = selectedObjs[0] ?? null;
+  const selectionBounds = getBoundingBox(selectedObjs);
+
+  // Resize handler: applies new bounds to selected objects
+  const handleResize = useCallback((newBounds: BoundingBox) => {
+    if (!selectionBounds || selectedObjs.length === 0) return;
+
+    if (selectedObjs.length === 1) {
+      const obj = selectedObjs[0];
+      moveObject(obj.id, newBounds.x, newBounds.y);
+      resizeObject(obj.id, newBounds.width, newBounds.height);
+    } else {
+      // Scale all objects proportionally
+      const scaleX = selectionBounds.width > 0 ? newBounds.width / selectionBounds.width : 1;
+      const scaleY = selectionBounds.height > 0 ? newBounds.height / selectionBounds.height : 1;
+      for (const obj of selectedObjs) {
+        const relX = obj.x - selectionBounds.x;
+        const relY = obj.y - selectionBounds.y;
+        moveObject(obj.id, newBounds.x + relX * scaleX, newBounds.y + relY * scaleY);
+        resizeObject(obj.id, obj.width * scaleX, obj.height * scaleY);
+      }
+    }
+  }, [selectedObjs, selectionBounds, moveObject, resizeObject]);
 
   const editingObj = editingId !== null
     ? (objects.find((o) => o.id === editingId && (o.type === 'sticky' || o.type === 'text')) as StickyNote | TextObject | undefined)
@@ -465,6 +490,13 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
               endX={rubberBand.endX}
               endY={rubberBand.endY}
               visible={true}
+            />
+          )}
+          {selectionBounds && selectedIds.length > 0 && (
+            <TransformHandles
+              bounds={selectionBounds}
+              onResize={handleResize}
+              onResizeEnd={handleResize}
             />
           )}
         </Layer>
