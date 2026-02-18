@@ -152,6 +152,55 @@ getBoardState() // returns current board objects for context
 | Complexity        | Multi-step operation execution                |
 | Reliability       | Consistent, accurate execution                |
 
+## AI-First Development Requirements
+
+This week emphasizes learning AI-first development workflows. You must document your process.
+
+### Required Tools
+
+Use at least two of:
+
+- Claude Code
+- Cursor
+- Codex
+- MCP integrations
+
+### AI Development Log (Required)
+
+Submit a 1-page document covering:
+
+| Section | Content |
+|---|---|
+| Tools & Workflow | Which AI coding tools you used, how you integrated them |
+| MCP Usage | Which MCPs you used (if any), what they enabled |
+| Effective Prompts | 3-5 prompts that worked well (include the actual prompts) |
+| Code Analysis | Rough % of AI-generated vs hand-written code |
+| Strengths & Limitations | Where AI excelled, where it struggled |
+| Key Learnings | Insights about working with coding agents |
+
+### AI Cost Analysis (Required)
+
+Understanding AI costs is critical for production applications. Submit a cost analysis covering:
+
+#### Development & Testing Costs
+
+Track and report your actual spend during development:
+
+- LLM API costs (OpenAI, Anthropic, etc.)
+- Total tokens consumed (input/output breakdown)
+- Number of API calls made
+- Any other AI-related costs (embeddings, hosting, etc.)
+
+#### Production Cost Projections
+
+Estimate monthly costs at different user scales:
+
+| 100 Users | 1,000 Users | 10,000 Users | 100,000 Users |
+|---|---|---|---|
+| $___/month | $___/month | $___/month | $___/month |
+
+Include assumptions: average AI commands per user per session, average sessions per user per month, token counts per command type.
+
 #### Technical Stack
 
 | Layer         | Technology                                                                               |
