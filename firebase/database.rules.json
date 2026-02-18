@@ -3,14 +3,14 @@
     "boards": {
       "$boardId": {
         "cursors": {
+          ".read": "auth != null",
           "$uid": {
-            ".read": "auth != null",
             ".write": "auth != null && auth.uid === $uid"
           }
         },
         "presence": {
+          ".read": "auth != null",
           "$uid": {
-            ".read": "auth != null",
             ".write": "auth != null && auth.uid === $uid"
           }
         }
