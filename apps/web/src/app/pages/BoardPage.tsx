@@ -58,8 +58,13 @@ export function BoardPage() {
         if (!canRead) {
           const board = await api.getBoard(id!);
           if (cancelled) return;
-          setBoardState(board ? { status: 'unauthorized' } : { status: 'not-found' });
-          return;
+          if (!board) {
+            setBoardState({ status: 'not-found' });
+            return;
+          }
+          // Auto-join: board exists but user isn't a member — link acts as invite
+          await api.joinBoard(id!);
+          if (cancelled) return;
         }
 
         setBoardState({ status: 'ready' });
@@ -94,7 +99,7 @@ export function BoardPage() {
 
 function BoardCanvas({ boardId, width, height }: { boardId: string; width: number; height: number }) {
   const { user } = useAuth();
-  const { camera, stageProps, resetView } = useViewport();
+  const { camera, stageProps, stageRef, resetView } = useViewport();
   const {
     objects,
     selectedId,
@@ -249,6 +254,7 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
   return (
     <div style={{ width: '100vw', height: '100vh', overflow: 'hidden' }}>
       <Stage
+        ref={stageRef}
         width={width}
         height={height}
         {...stageProps}

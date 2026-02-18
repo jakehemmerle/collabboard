@@ -18,11 +18,17 @@ service cloud.firestore {
         && request.resource.data.ownerId == request.auth.uid
         && request.resource.data.members[request.auth.uid].role == 'owner';
 
-      // Members can update, but cannot change ownerId or remove themselves
+      // Members can update, but cannot change ownerId
       allow update: if request.auth != null
         && resource.data.members[request.auth.uid] != null
         && request.resource.data.ownerId == resource.data.ownerId
         && request.resource.data.members[request.auth.uid] != null;
+
+      // Any authenticated user can join a board as collaborator (link = invite)
+      allow update: if request.auth != null
+        && resource.data.members[request.auth.uid] == null
+        && request.resource.data.ownerId == resource.data.ownerId
+        && request.resource.data.members[request.auth.uid].role == 'collaborator';
 
       // Only the owner can delete a board
       allow delete: if request.auth != null

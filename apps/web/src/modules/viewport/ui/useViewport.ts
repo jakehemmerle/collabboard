@@ -11,6 +11,7 @@ function getApi(): ViewportApi {
 
 export function useViewport() {
   const cameraRef = useRef<Camera>(getApi().getCamera());
+  const stageRef = useRef<Konva.Stage | null>(null);
 
   const subscribe = useCallback((onStoreChange: () => void) => {
     return viewportEvents.on('cameraChanged', (cam) => {
@@ -54,6 +55,11 @@ export function useViewport() {
 
   const resetView = useCallback(() => {
     getApi().setCamera(INITIAL_CAMERA);
+    const stage = stageRef.current;
+    if (stage) {
+      stage.position({ x: INITIAL_CAMERA.x, y: INITIAL_CAMERA.y });
+      stage.scale({ x: INITIAL_CAMERA.scale, y: INITIAL_CAMERA.scale });
+    }
   }, []);
 
   const stageProps = {
@@ -66,5 +72,5 @@ export function useViewport() {
     onWheel: handleWheel,
   };
 
-  return { camera, stageProps, resetView };
+  return { camera, stageProps, stageRef, resetView };
 }

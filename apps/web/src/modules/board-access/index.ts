@@ -87,6 +87,20 @@ export const boardAccessModule: AppModule<BoardAccessApi> = {
         return getPermissions().can(capability, { role: result.role });
       },
 
+      async joinBoard(boardId) {
+        const uid = requireUid();
+        const boardRef = doc(db, 'boards', boardId);
+        await setDoc(
+          boardRef,
+          {
+            members: {
+              [uid]: { role: 'collaborator' as BoardRole, joinedAt: Date.now() },
+            },
+          },
+          { merge: true },
+        );
+      },
+
       async grantMembership(boardId, userId, role) {
         const result = await getCallerRole(boardId);
         if (!result) throw new Error('Not a member of this board');
