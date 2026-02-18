@@ -25,9 +25,11 @@ service cloud.firestore {
         && request.resource.data.members[request.auth.uid] != null;
 
       // Any authenticated user can join a board as collaborator (link = invite)
+      // Uses affectedKeys() because update ops don't populate request.resource.data
+      // with unchanged fields like ownerId
       allow update: if request.auth != null
         && resource.data.members[request.auth.uid] == null
-        && request.resource.data.ownerId == resource.data.ownerId
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members'])
         && request.resource.data.members[request.auth.uid].role == 'collaborator';
 
       // Only the owner can delete a board
