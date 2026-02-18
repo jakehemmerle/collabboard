@@ -1,7 +1,7 @@
 import { useCallback, useRef, useSyncExternalStore } from 'react';
 import { getModuleApi } from '../../../app/module-registry.ts';
 import { objectsEvents, OBJECTS_MODULE_ID } from '../index.ts';
-import type { ObjectsApi, ObjectsState, StickyColor } from '../contracts.ts';
+import type { ObjectsApi, ObjectsState, StickyColor, ConnectorStyle } from '../contracts.ts';
 
 function getApi(): ObjectsApi {
   return getModuleApi<ObjectsApi>(OBJECTS_MODULE_ID);
@@ -69,6 +69,18 @@ export function useObjects() {
     return getApi().applyLocal({ kind: 'duplicate', objectIds });
   }, []);
 
+  const createConnector = useCallback((sourceId: string, targetId: string, style?: ConnectorStyle, stroke?: string) => {
+    return getApi().applyLocal({ kind: 'create-connector', sourceId, targetId, style, stroke });
+  }, []);
+
+  const createFrame = useCallback((x: number, y: number, title?: string, fill?: string) => {
+    return getApi().applyLocal({ kind: 'create-frame', x, y, title, fill });
+  }, []);
+
+  const updateFrameChildren = useCallback((objectId: string, children: string[]) => {
+    return getApi().applyLocal({ kind: 'update-frame-children', objectId, children });
+  }, []);
+
   const copyToClipboard = useCallback((objectIds: string[]) => {
     getApi().copyToClipboard(objectIds);
   }, []);
@@ -114,5 +126,8 @@ export function useObjects() {
     toggleSelect,
     selectAll,
     deselectAll,
+    createConnector,
+    createFrame,
+    updateFrameChildren,
   };
 }

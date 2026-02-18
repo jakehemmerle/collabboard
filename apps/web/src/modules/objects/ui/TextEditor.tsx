@@ -1,17 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
-import type { StickyNote, TextObject } from '../contracts.ts';
+import type { StickyNote, TextObject, FrameObject } from '../contracts.ts';
 import { STICKY_COLORS } from '../contracts.ts';
 import type { Camera } from '../../viewport/contracts.ts';
 
 interface TextEditorProps {
-  obj: StickyNote | TextObject;
+  obj: StickyNote | TextObject | FrameObject;
   camera: Camera;
   onSave: (text: string) => void;
   onCancel: () => void;
 }
 
 export function TextEditor({ obj, camera, onSave, onCancel }: TextEditorProps) {
-  const [text, setText] = useState(obj.text);
+  const initialText = obj.type === 'frame' ? (obj as FrameObject).title : (obj as StickyNote | TextObject).text;
+  const [text, setText] = useState(initialText);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -37,10 +38,11 @@ export function TextEditor({ obj, camera, onSave, onCancel }: TextEditorProps) {
   }
 
   const isSticky = obj.type === 'sticky';
+  const isFrame = obj.type === 'frame';
   const bgColor = isSticky
     ? (STICKY_COLORS[(obj as StickyNote).color] ?? STICKY_COLORS.yellow)
-    : '#ffffff';
-  const fontSize = isSticky ? 14 : (obj as TextObject).fontSize;
+    : isFrame ? '#f5f5f5' : '#ffffff';
+  const fontSize = isSticky ? 14 : isFrame ? 14 : (obj as TextObject).fontSize;
 
   return (
     <textarea

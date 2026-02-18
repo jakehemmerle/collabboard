@@ -14,13 +14,16 @@ import { RectangleShape } from '../../modules/objects/ui/RectangleShape.tsx';
 import { CircleShape } from '../../modules/objects/ui/CircleShape.tsx';
 import { LineShape } from '../../modules/objects/ui/LineShape.tsx';
 import { TextShape } from '../../modules/objects/ui/TextShape.tsx';
+import { ConnectorShape } from '../../modules/objects/ui/ConnectorShape.tsx';
+import { FrameShape } from '../../modules/objects/ui/FrameShape.tsx';
 import { TextEditor } from '../../modules/objects/ui/TextEditor.tsx';
 import { Toolbar } from '../../modules/objects/ui/Toolbar.tsx';
 import { SelectionBox } from '../../modules/objects/ui/SelectionBox.tsx';
 import { getSelectionBoxBounds, isObjectInBounds, getBoundingBox } from '../../modules/objects/domain/geometry.ts';
 import type { BoundingBox } from '../../modules/objects/domain/geometry.ts';
 import { TransformHandles } from '../../modules/objects/ui/TransformHandles.tsx';
-import type { StickyNote, TextObject } from '../../modules/objects/contracts.ts';
+import { findObjectsInBounds } from '../../modules/objects/domain/frame-logic.ts';
+import type { StickyNote, TextObject, FrameObject, ConnectorObject } from '../../modules/objects/contracts.ts';
 import type { ViewportApi } from '../../modules/viewport/contracts.ts';
 import { VIEWPORT_MODULE_ID } from '../../modules/viewport/index.ts';
 import type { BoardSessionApi } from '../../modules/board-session/contracts.ts';
@@ -129,12 +132,19 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
     toggleSelect,
     selectAll,
     deselectAll,
+    createConnector,
+    createFrame,
+    updateFrameChildren,
   } = useObjects();
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [sessionReady, setSessionReady] = useState(false);
   const [copied, setCopied] = useState(false);
   const presenceRef = useRef<PresenceApi | null>(null);
+
+  // Connector creation mode: click source, then click target
+  const [connectorMode, setConnectorMode] = useState(false);
+  const [connectorSourceId, setConnectorSourceId] = useState<string | null>(null);
 
   // Rubber-band selection state
   const [rubberBand, setRubberBand] = useState<{ startX: number; startY: number; endX: number; endY: number } | null>(null);
@@ -233,7 +243,13 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
       const center = getViewportCenter();
       pasteFromClipboard(center.x, center.y);
     },
-    onDeselect: deselectAll,
+    onDeselect: () => {
+      if (connectorMode) {
+        setConnectorMode(false);
+        setConnectorSourceId(null);
+      }
+      deselectAll();
+    },
     isEditing: editingId !== null,
   });
 
@@ -270,7 +286,7 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
   }, [selectedObjs, rotateObject]);
 
   const editingObj = editingId !== null
-    ? (objects.find((o) => o.id === editingId && (o.type === 'sticky' || o.type === 'text')) as StickyNote | TextObject | undefined)
+    ? (objects.find((o) => o.id === editingId && (o.type === 'sticky' || o.type === 'text' || o.type === 'frame')) as StickyNote | TextObject | FrameObject | undefined)
     : undefined;
 
   function getViewportCenter() {
@@ -303,6 +319,17 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
     createText(center.x - 100, center.y - 20);
   }
 
+  function handleToggleConnectorMode() {
+    setConnectorMode((prev) => !prev);
+    setConnectorSourceId(null);
+    deselectAll();
+  }
+
+  function handleCreateFrame() {
+    const center = getViewportCenter();
+    createFrame(center.x - 200, center.y - 150);
+  }
+
   function handleChangeColor(color: string) {
     for (const obj of selectedObjs) {
       updateColor(obj.id, color);
@@ -323,12 +350,52 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
   }
 
   function handleObjectSelect(objectId: string, e: Konva.KonvaEventObject<MouseEvent | TouchEvent>) {
+    // Connector creation mode: first click = source, second click = target
+    if (connectorMode) {
+      const clickedObj = objects.find((o) => o.id === objectId);
+      if (!clickedObj || clickedObj.type === 'connector') return;
+
+      if (!connectorSourceId) {
+        setConnectorSourceId(objectId);
+        selectObject(objectId);
+      } else if (objectId !== connectorSourceId) {
+        createConnector(connectorSourceId, objectId);
+        setConnectorSourceId(null);
+        setConnectorMode(false);
+        deselectAll();
+      }
+      return;
+    }
+
     const shiftKey = 'shiftKey' in e.evt ? e.evt.shiftKey : false;
     if (shiftKey) {
       toggleSelect(objectId);
     } else {
       selectObject(objectId);
     }
+  }
+
+  // Recompute children for all frames (called after any object or frame moves)
+  function recomputeAllFrameChildren() {
+    for (const obj of objects) {
+      if (obj.type === 'frame') {
+        const bounds = { x: obj.x, y: obj.y, width: obj.width, height: obj.height };
+        const children = findObjectsInBounds(objects, bounds);
+        updateFrameChildren(obj.id, children.map((c) => c.id));
+      }
+    }
+  }
+
+  // Recompute frame children after frame drag ends
+  function handleFrameDragEnd(frameId: string, x: number, y: number) {
+    moveObject(frameId, x, y);
+    recomputeAllFrameChildren();
+  }
+
+  // Regular object drag end: move then recompute frame children
+  function handleObjectDragEnd(objectId: string, x: number, y: number) {
+    moveObject(objectId, x, y);
+    recomputeAllFrameChildren();
   }
 
   const handleTextSave = useCallback(
@@ -421,7 +488,40 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
       >
         <BackgroundGrid camera={camera} width={width} height={height} />
         <Layer>
-          {objects.map((obj) => {
+          {/* Frames render first (behind everything) */}
+          {objects.filter((o) => o.type === 'frame').map((obj) => {
+            if (obj.type !== 'frame') return null;
+            return (
+              <FrameShape
+                key={obj.id}
+                obj={obj}
+                isSelected={selectedIds.includes(obj.id)}
+                onSelect={(e) => handleObjectSelect(obj.id, e)}
+                onDragMove={(x, y) => handleDragMove(obj.id, x, y)}
+                onDragEnd={(x, y) => handleFrameDragEnd(obj.id, x, y)}
+                onDblClick={() => setEditingId(obj.id)}
+              />
+            );
+          })}
+
+          {/* Connectors render below regular objects */}
+          {objects.filter((o) => o.type === 'connector').map((obj) => {
+            if (obj.type !== 'connector') return null;
+            const conn = obj as ConnectorObject;
+            return (
+              <ConnectorShape
+                key={obj.id}
+                obj={conn}
+                source={objects.find((o) => o.id === conn.sourceId)}
+                target={objects.find((o) => o.id === conn.targetId)}
+                isSelected={selectedIds.includes(obj.id)}
+                onSelect={(e) => handleObjectSelect(obj.id, e)}
+              />
+            );
+          })}
+
+          {/* Regular objects on top */}
+          {objects.filter((o) => o.type !== 'frame' && o.type !== 'connector').map((obj) => {
             const isSelected = selectedIds.includes(obj.id);
 
             if (obj.type === 'sticky') {
@@ -432,7 +532,7 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
                   isSelected={isSelected}
                   onSelect={(e) => handleObjectSelect(obj.id, e)}
                   onDragMove={(x, y) => handleDragMove(obj.id, x, y)}
-                  onDragEnd={(x, y) => moveObject(obj.id, x, y)}
+                  onDragEnd={(x, y) => handleObjectDragEnd(obj.id, x, y)}
                   onDblClick={() => setEditingId(obj.id)}
                 />
               );
@@ -446,7 +546,7 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
                   isSelected={isSelected}
                   onSelect={(e) => handleObjectSelect(obj.id, e)}
                   onDragMove={(x, y) => handleDragMove(obj.id, x, y)}
-                  onDragEnd={(x, y) => moveObject(obj.id, x, y)}
+                  onDragEnd={(x, y) => handleObjectDragEnd(obj.id, x, y)}
                 />
               );
             }
@@ -459,7 +559,7 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
                   isSelected={isSelected}
                   onSelect={(e) => handleObjectSelect(obj.id, e)}
                   onDragMove={(x, y) => handleDragMove(obj.id, x, y)}
-                  onDragEnd={(x, y) => moveObject(obj.id, x, y)}
+                  onDragEnd={(x, y) => handleObjectDragEnd(obj.id, x, y)}
                 />
               );
             }
@@ -472,7 +572,7 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
                   isSelected={isSelected}
                   onSelect={(e) => handleObjectSelect(obj.id, e)}
                   onDragMove={(x, y) => handleDragMove(obj.id, x, y)}
-                  onDragEnd={(x, y) => moveObject(obj.id, x, y)}
+                  onDragEnd={(x, y) => handleObjectDragEnd(obj.id, x, y)}
                 />
               );
             }
@@ -485,7 +585,7 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
                   isSelected={isSelected}
                   onSelect={(e) => handleObjectSelect(obj.id, e)}
                   onDragMove={(x, y) => handleDragMove(obj.id, x, y)}
-                  onDragEnd={(x, y) => moveObject(obj.id, x, y)}
+                  onDragEnd={(x, y) => handleObjectDragEnd(obj.id, x, y)}
                   onDblClick={() => setEditingId(obj.id)}
                 />
               );
@@ -530,6 +630,7 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
           firstSelected
             ? firstSelected.type === 'sticky' ? firstSelected.color
               : firstSelected.type === 'line' ? firstSelected.stroke
+              : firstSelected.type === 'connector' ? firstSelected.stroke
               : 'fill' in firstSelected ? firstSelected.fill
               : null
             : null
@@ -539,6 +640,9 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
         onCreateCircle={handleCreateCircle}
         onCreateLine={handleCreateLine}
         onCreateText={handleCreateText}
+        onCreateConnector={handleToggleConnectorMode}
+        onCreateFrame={handleCreateFrame}
+        connectorMode={connectorMode}
         onChangeColor={handleChangeColor}
         onDelete={handleDelete}
         onDuplicate={selectedIds.length > 0 ? handleDuplicate : undefined}
@@ -582,6 +686,34 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
       >
         Reset View
       </button>
+
+      {connectorMode && (
+        <div
+          style={{
+            position: 'absolute',
+            bottom: 16,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            padding: '8px 16px',
+            background: '#E3F2FD',
+            border: '1px solid #2196F3',
+            borderRadius: 4,
+            fontSize: 14,
+            color: '#1565C0',
+            zIndex: 10,
+          }}
+        >
+          {connectorSourceId
+            ? 'Click target object to complete connector'
+            : 'Click source object to start connector'}
+          <button
+            onClick={() => { setConnectorMode(false); setConnectorSourceId(null); }}
+            style={{ marginLeft: 8, background: 'none', border: 'none', cursor: 'pointer', color: '#D32F2F', fontSize: 14 }}
+          >
+            Cancel
+          </button>
+        </div>
+      )}
     </div>
   );
 }

@@ -9,11 +9,16 @@ interface ToolbarProps {
   onCreateCircle: () => void;
   onCreateLine: () => void;
   onCreateText: () => void;
+  onCreateConnector: () => void;
+  onCreateFrame: () => void;
+  connectorMode?: boolean;
   onChangeColor: (color: string) => void;
   onDelete: () => void;
   onDuplicate?: () => void;
 }
 
+const CONNECTOR_COLORS = ['#616161', '#D32F2F', '#1565C0', '#2E7D32', '#F57F17', '#4A148C'];
+const FRAME_COLORS = ['rgba(200,200,200,0.1)', 'rgba(239,154,154,0.15)', 'rgba(206,147,216,0.15)', 'rgba(144,202,249,0.15)', 'rgba(165,214,167,0.15)', 'rgba(255,224,130,0.15)'];
 const SHAPE_COLORS = ['#E0E0E0', '#EF9A9A', '#CE93D8', '#90CAF9', '#A5D6A7', '#FFE082'];
 const LINE_COLORS = ['#616161', '#D32F2F', '#1565C0', '#2E7D32', '#F57F17', '#4A148C'];
 const TEXT_COLORS = ['#333333', '#D32F2F', '#1565C0', '#2E7D32', '#F57F17', '#4A148C'];
@@ -23,7 +28,9 @@ function getColorPalette(type: BoardObjectType): { colors: (string | [StickyColo
     return { colors: Object.entries(STICKY_COLORS) as [StickyColor, string][], mode: 'name' };
   }
   if (type === 'line') return { colors: LINE_COLORS, mode: 'hex' };
+  if (type === 'connector') return { colors: CONNECTOR_COLORS, mode: 'hex' };
   if (type === 'text') return { colors: TEXT_COLORS, mode: 'hex' };
+  if (type === 'frame') return { colors: FRAME_COLORS, mode: 'hex' };
   return { colors: SHAPE_COLORS, mode: 'hex' };
 }
 
@@ -35,6 +42,9 @@ export function Toolbar({
   onCreateCircle,
   onCreateLine,
   onCreateText,
+  onCreateConnector,
+  onCreateFrame,
+  connectorMode,
   onChangeColor,
   onDelete,
   onDuplicate,
@@ -55,6 +65,17 @@ export function Toolbar({
       </button>
       <button onClick={onCreateText} style={btnStyle} title="Add Text">
         T Text
+      </button>
+      <div style={dividerStyle} />
+      <button
+        onClick={onCreateConnector}
+        style={{ ...btnStyle, ...(connectorMode ? { background: '#E3F2FD', borderColor: '#2196F3' } : {}) }}
+        title="Add Connector (click source, then target)"
+      >
+        ↗ Connector
+      </button>
+      <button onClick={onCreateFrame} style={btnStyle} title="Add Frame">
+        ▢ Frame
       </button>
 
       {selectedType && (

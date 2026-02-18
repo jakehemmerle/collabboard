@@ -1,6 +1,6 @@
 // --- Types ---
 
-export type BoardObjectType = 'sticky' | 'rectangle' | 'circle' | 'line' | 'text';
+export type BoardObjectType = 'sticky' | 'rectangle' | 'circle' | 'line' | 'text' | 'connector' | 'frame';
 
 export type StickyColor = 'yellow' | 'pink' | 'blue' | 'green' | 'purple';
 
@@ -17,6 +17,7 @@ export const DEFAULT_RECT_SIZE = { width: 200, height: 150 };
 export const DEFAULT_CIRCLE_SIZE = { width: 100, height: 100 };
 export const DEFAULT_LINE_LENGTH = 200;
 export const DEFAULT_TEXT_SIZE = { width: 200, height: 40 };
+export const DEFAULT_FRAME_SIZE = { width: 400, height: 300 };
 
 // --- Object models ---
 
@@ -69,7 +70,25 @@ export interface TextObject extends BoardObjectBase {
   fill: string;
 }
 
-export type BoardObject = StickyNote | RectangleObject | CircleObject | LineObject | TextObject;
+export type ConnectorStyle = 'arrow' | 'line';
+
+export interface ConnectorObject extends BoardObjectBase {
+  type: 'connector';
+  sourceId: string;
+  targetId: string;
+  style: ConnectorStyle;
+  stroke: string;
+  strokeWidth: number;
+}
+
+export interface FrameObject extends BoardObjectBase {
+  type: 'frame';
+  title: string;
+  fill: string;
+  children: string[];
+}
+
+export type BoardObject = StickyNote | RectangleObject | CircleObject | LineObject | TextObject | ConnectorObject | FrameObject;
 
 // --- Intents (local user actions) ---
 
@@ -85,7 +104,10 @@ export type ObjectIntent =
   | { kind: 'resize'; objectId: string; width: number; height: number }
   | { kind: 'rotate'; objectId: string; rotation: number }
   | { kind: 'delete'; objectId: string }
-  | { kind: 'duplicate'; objectIds: string[]; offsetX?: number; offsetY?: number };
+  | { kind: 'duplicate'; objectIds: string[]; offsetX?: number; offsetY?: number }
+  | { kind: 'create-connector'; sourceId: string; targetId: string; style?: ConnectorStyle; stroke?: string }
+  | { kind: 'create-frame'; x: number; y: number; title?: string; fill?: string }
+  | { kind: 'update-frame-children'; objectId: string; children: string[] };
 
 export interface ApplyResult {
   ok: boolean;
