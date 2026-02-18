@@ -29,6 +29,18 @@ export function useObjects() {
     return getApi().applyLocal({ kind: 'create-rectangle', x, y, fill });
   }, []);
 
+  const createCircle = useCallback((x: number, y: number, fill?: string) => {
+    return getApi().applyLocal({ kind: 'create-circle', x, y, fill });
+  }, []);
+
+  const createLine = useCallback((x: number, y: number, x2?: number, y2?: number, stroke?: string) => {
+    return getApi().applyLocal({ kind: 'create-line', x, y, x2, y2, stroke });
+  }, []);
+
+  const createText = useCallback((x: number, y: number, text?: string, fontSize?: number) => {
+    return getApi().applyLocal({ kind: 'create-text', x, y, text, fontSize });
+  }, []);
+
   const moveObject = useCallback((objectId: string, x: number, y: number) => {
     return getApi().applyLocal({ kind: 'move', objectId, x, y });
   }, []);
@@ -58,6 +70,9 @@ export function useObjects() {
     selectedId: state.selectedId,
     createSticky,
     createRectangle,
+    createCircle,
+    createLine,
+    createText,
     moveObject,
     updateText,
     updateColor,

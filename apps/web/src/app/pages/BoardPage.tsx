@@ -10,9 +10,12 @@ import { BackgroundGrid } from '../../modules/viewport/ui/BackgroundGrid.tsx';
 import { useObjects } from '../../modules/objects/ui/useObjects.ts';
 import { StickyNoteShape } from '../../modules/objects/ui/StickyNoteShape.tsx';
 import { RectangleShape } from '../../modules/objects/ui/RectangleShape.tsx';
+import { CircleShape } from '../../modules/objects/ui/CircleShape.tsx';
+import { LineShape } from '../../modules/objects/ui/LineShape.tsx';
+import { TextShape } from '../../modules/objects/ui/TextShape.tsx';
 import { TextEditor } from '../../modules/objects/ui/TextEditor.tsx';
 import { Toolbar } from '../../modules/objects/ui/Toolbar.tsx';
-import type { StickyNote } from '../../modules/objects/contracts.ts';
+import type { StickyNote, TextObject } from '../../modules/objects/contracts.ts';
 import type { ViewportApi } from '../../modules/viewport/contracts.ts';
 import { VIEWPORT_MODULE_ID } from '../../modules/viewport/index.ts';
 import type { BoardSessionApi } from '../../modules/board-session/contracts.ts';
@@ -105,6 +108,9 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
     selectedId,
     createSticky,
     createRectangle,
+    createCircle,
+    createLine,
+    createText,
     moveObject,
     updateText,
     updateColor,
@@ -198,7 +204,7 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
     : null;
 
   const editingObj = editingId !== null
-    ? (objects.find((o) => o.id === editingId && o.type === 'sticky') as StickyNote | undefined)
+    ? (objects.find((o) => o.id === editingId && (o.type === 'sticky' || o.type === 'text')) as StickyNote | TextObject | undefined)
     : undefined;
 
   function getViewportCenter() {
@@ -214,6 +220,21 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
   function handleCreateRectangle() {
     const center = getViewportCenter();
     createRectangle(center.x - 100, center.y - 75);
+  }
+
+  function handleCreateCircle() {
+    const center = getViewportCenter();
+    createCircle(center.x - 50, center.y - 50);
+  }
+
+  function handleCreateLine() {
+    const center = getViewportCenter();
+    createLine(center.x - 100, center.y, center.x + 100, center.y);
+  }
+
+  function handleCreateText() {
+    const center = getViewportCenter();
+    createText(center.x - 100, center.y - 20);
   }
 
   function handleChangeColor(color: string) {
@@ -298,6 +319,46 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
               );
             }
 
+            if (obj.type === 'circle') {
+              return (
+                <CircleShape
+                  key={obj.id}
+                  obj={obj}
+                  isSelected={obj.id === selectedId}
+                  onSelect={() => selectObject(obj.id)}
+                  onDragMove={(x, y) => handleDragMove(obj.id, x, y)}
+                  onDragEnd={(x, y) => moveObject(obj.id, x, y)}
+                />
+              );
+            }
+
+            if (obj.type === 'line') {
+              return (
+                <LineShape
+                  key={obj.id}
+                  obj={obj}
+                  isSelected={obj.id === selectedId}
+                  onSelect={() => selectObject(obj.id)}
+                  onDragMove={(x, y) => handleDragMove(obj.id, x, y)}
+                  onDragEnd={(x, y) => moveObject(obj.id, x, y)}
+                />
+              );
+            }
+
+            if (obj.type === 'text') {
+              return (
+                <TextShape
+                  key={obj.id}
+                  obj={obj}
+                  isSelected={obj.id === selectedId}
+                  onSelect={() => selectObject(obj.id)}
+                  onDragMove={(x, y) => handleDragMove(obj.id, x, y)}
+                  onDragEnd={(x, y) => moveObject(obj.id, x, y)}
+                  onDblClick={() => setEditingId(obj.id)}
+                />
+              );
+            }
+
             return null;
           })}
         </Layer>
@@ -317,11 +378,17 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
         selectedType={selectedObj?.type ?? null}
         selectedColor={
           selectedObj
-            ? selectedObj.type === 'sticky' ? selectedObj.color : selectedObj.fill
+            ? selectedObj.type === 'sticky' ? selectedObj.color
+              : selectedObj.type === 'line' ? selectedObj.stroke
+              : 'fill' in selectedObj ? selectedObj.fill
+              : null
             : null
         }
         onCreateSticky={handleCreateSticky}
         onCreateRectangle={handleCreateRectangle}
+        onCreateCircle={handleCreateCircle}
+        onCreateLine={handleCreateLine}
+        onCreateText={handleCreateText}
         onChangeColor={handleChangeColor}
         onDelete={handleDelete}
       />

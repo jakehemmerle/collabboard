@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import type { StickyNote } from '../contracts.ts';
+import type { StickyNote, TextObject } from '../contracts.ts';
 import { STICKY_COLORS } from '../contracts.ts';
 import type { Camera } from '../../viewport/contracts.ts';
 
 interface TextEditorProps {
-  obj: StickyNote;
+  obj: StickyNote | TextObject;
   camera: Camera;
   onSave: (text: string) => void;
   onCancel: () => void;
@@ -36,7 +36,11 @@ export function TextEditor({ obj, camera, onSave, onCancel }: TextEditorProps) {
     onSave(text);
   }
 
-  const bgColor = STICKY_COLORS[obj.color] ?? STICKY_COLORS.yellow;
+  const isSticky = obj.type === 'sticky';
+  const bgColor = isSticky
+    ? (STICKY_COLORS[(obj as StickyNote).color] ?? STICKY_COLORS.yellow)
+    : '#ffffff';
+  const fontSize = isSticky ? 14 : (obj as TextObject).fontSize;
 
   return (
     <textarea
@@ -50,12 +54,12 @@ export function TextEditor({ obj, camera, onSave, onCancel }: TextEditorProps) {
         left: screenX,
         top: screenY,
         width: scaledWidth,
-        height: scaledHeight,
+        height: Math.max(scaledHeight, 40 * camera.scale),
         background: bgColor,
         border: '2px solid #2196F3',
-        borderRadius: 8 * camera.scale,
-        padding: 12 * camera.scale,
-        fontSize: 14 * camera.scale,
+        borderRadius: isSticky ? 8 * camera.scale : 2,
+        padding: isSticky ? 12 * camera.scale : 4 * camera.scale,
+        fontSize: fontSize * camera.scale,
         fontFamily: 'sans-serif',
         color: '#333',
         resize: 'none',

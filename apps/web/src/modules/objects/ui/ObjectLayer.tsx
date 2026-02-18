@@ -2,6 +2,9 @@ import { Layer } from 'react-konva';
 import { useObjects } from './useObjects.ts';
 import { StickyNoteShape } from './StickyNoteShape.tsx';
 import { RectangleShape } from './RectangleShape.tsx';
+import { CircleShape } from './CircleShape.tsx';
+import { LineShape } from './LineShape.tsx';
+import { TextShape } from './TextShape.tsx';
 import type { Camera } from '../../viewport/contracts.ts';
 
 interface ObjectLayerProps {
@@ -35,6 +38,43 @@ export function ObjectLayer({ camera: _camera }: ObjectLayerProps) {
               isSelected={obj.id === selectedId}
               onSelect={() => selectObject(obj.id)}
               onDragEnd={(x, y) => moveObject(obj.id, x, y)}
+            />
+          );
+        }
+
+        if (obj.type === 'circle') {
+          return (
+            <CircleShape
+              key={obj.id}
+              obj={obj}
+              isSelected={obj.id === selectedId}
+              onSelect={() => selectObject(obj.id)}
+              onDragEnd={(x, y) => moveObject(obj.id, x, y)}
+            />
+          );
+        }
+
+        if (obj.type === 'line') {
+          return (
+            <LineShape
+              key={obj.id}
+              obj={obj}
+              isSelected={obj.id === selectedId}
+              onSelect={() => selectObject(obj.id)}
+              onDragEnd={(x, y) => moveObject(obj.id, x, y)}
+            />
+          );
+        }
+
+        if (obj.type === 'text') {
+          return (
+            <TextShape
+              key={obj.id}
+              obj={obj}
+              isSelected={obj.id === selectedId}
+              onSelect={() => selectObject(obj.id)}
+              onDragEnd={(x, y) => moveObject(obj.id, x, y)}
+              onDblClick={() => {}}
             />
           );
         }
