@@ -1,6 +1,7 @@
 import {
   onAuthStateChanged,
   signInWithPopup,
+  signInAnonymously,
   signOut as firebaseSignOut,
   GoogleAuthProvider,
 } from 'firebase/auth';
@@ -54,6 +55,11 @@ export const authModule: AppModule<AuthApi> = {
 
       async signIn(_provider) {
         const result = await signInWithPopup(auth, new GoogleAuthProvider());
+        return toAuthSession(result.user);
+      },
+
+      async signInAnon() {
+        const result = await signInAnonymously(auth);
         return toAuthSession(result.user);
       },
 
