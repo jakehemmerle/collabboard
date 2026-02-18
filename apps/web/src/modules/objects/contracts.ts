@@ -27,6 +27,7 @@ interface BoardObjectBase {
   y: number;
   width: number;
   height: number;
+  rotation?: number;
   createdBy: string;
   createdAt: number;
   updatedAt: number;
@@ -82,6 +83,7 @@ export type ObjectIntent =
   | { kind: 'update-text'; objectId: string; text: string }
   | { kind: 'update-color'; objectId: string; color: string }
   | { kind: 'resize'; objectId: string; width: number; height: number }
+  | { kind: 'rotate'; objectId: string; rotation: number }
   | { kind: 'delete'; objectId: string };
 
 export interface ApplyResult {

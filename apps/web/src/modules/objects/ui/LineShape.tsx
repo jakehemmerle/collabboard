@@ -36,6 +36,7 @@ export const LineShape = React.memo(function LineShape({
     <Group
       x={obj.x}
       y={obj.y}
+      rotation={obj.rotation ?? 0}
       draggable
       onClick={onSelect}
       onTap={onSelect}

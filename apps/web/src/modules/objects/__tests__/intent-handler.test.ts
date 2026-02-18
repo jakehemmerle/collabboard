@@ -193,6 +193,26 @@ describe('intent-handler', () => {
     });
   });
 
+  describe('rotate', () => {
+    it('sets rotation on an existing object', () => {
+      const { objectId } = handleIntent({ kind: 'create-sticky', x: 0, y: 0 }, ACTOR);
+      const result = handleIntent({ kind: 'rotate', objectId: objectId!, rotation: 45 }, ACTOR);
+      expect(result.ok).toBe(true);
+
+      const obj = store.getObject(objectId!)!;
+      expect(obj.rotation).toBe(45);
+    });
+
+    it('updates rotation to a new value', () => {
+      const { objectId } = handleIntent({ kind: 'create-rectangle', x: 0, y: 0 }, ACTOR);
+      handleIntent({ kind: 'rotate', objectId: objectId!, rotation: 90 }, ACTOR);
+      handleIntent({ kind: 'rotate', objectId: objectId!, rotation: 180 }, ACTOR);
+
+      const obj = store.getObject(objectId!)!;
+      expect(obj.rotation).toBe(180);
+    });
+  });
+
   describe('delete', () => {
     it('removes an existing object', () => {
       const { objectId } = handleIntent({ kind: 'create-sticky', x: 0, y: 0 }, ACTOR);

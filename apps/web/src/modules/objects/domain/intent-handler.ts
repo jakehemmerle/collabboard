@@ -108,6 +108,10 @@ export function handleIntent(intent: ObjectIntent, actorId: string): ApplyResult
       store.updateObject(intent.objectId, { width: intent.width, height: intent.height });
       return { ok: true, objectId: intent.objectId };
     }
+    case 'rotate': {
+      store.updateObject(intent.objectId, { rotation: intent.rotation });
+      return { ok: true, objectId: intent.objectId };
+    }
     case 'delete': {
       store.removeObject(intent.objectId);
       return { ok: true, objectId: intent.objectId };

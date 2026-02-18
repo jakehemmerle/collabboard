@@ -49,6 +49,10 @@ export function useObjects() {
     return getApi().applyLocal({ kind: 'resize', objectId, width, height });
   }, []);
 
+  const rotateObject = useCallback((objectId: string, rotation: number) => {
+    return getApi().applyLocal({ kind: 'rotate', objectId, rotation });
+  }, []);
+
   const updateText = useCallback((objectId: string, text: string) => {
     return getApi().applyLocal({ kind: 'update-text', objectId, text });
   }, []);
@@ -87,6 +91,7 @@ export function useObjects() {
     createText,
     moveObject,
     resizeObject,
+    rotateObject,
     updateText,
     updateColor,
     deleteObject,

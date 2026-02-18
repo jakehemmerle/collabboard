@@ -34,6 +34,7 @@ export const RectangleShape = React.memo(function RectangleShape({
     <Group
       x={obj.x}
       y={obj.y}
+      rotation={obj.rotation ?? 0}
       draggable
       onClick={onSelect}
       onTap={onSelect}

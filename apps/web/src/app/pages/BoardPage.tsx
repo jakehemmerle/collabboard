@@ -117,6 +117,7 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
     createText,
     moveObject,
     resizeObject,
+    rotateObject,
     updateText,
     updateColor,
     deleteObject,
@@ -245,7 +246,7 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
   const selectionBounds = getBoundingBox(selectedObjs);
 
   // Resize handler: applies new bounds to selected objects
-  const handleResize = useCallback((newBounds: BoundingBox) => {
+  const handleObjectResize = useCallback((newBounds: BoundingBox) => {
     if (!selectionBounds || selectedObjs.length === 0) return;
 
     if (selectedObjs.length === 1) {
@@ -264,6 +265,13 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
       }
     }
   }, [selectedObjs, selectionBounds, moveObject, resizeObject]);
+
+  // Rotation handler
+  const handleObjectRotate = useCallback((rotation: number) => {
+    for (const obj of selectedObjs) {
+      rotateObject(obj.id, rotation);
+    }
+  }, [selectedObjs, rotateObject]);
 
   const editingObj = editingId !== null
     ? (objects.find((o) => o.id === editingId && (o.type === 'sticky' || o.type === 'text')) as StickyNote | TextObject | undefined)
@@ -495,8 +503,10 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
           {selectionBounds && selectedIds.length > 0 && (
             <TransformHandles
               bounds={selectionBounds}
-              onResize={handleResize}
-              onResizeEnd={handleResize}
+              onResize={handleObjectResize}
+              onResizeEnd={handleObjectResize}
+              onRotate={handleObjectRotate}
+              onRotateEnd={handleObjectRotate}
             />
           )}
         </Layer>
