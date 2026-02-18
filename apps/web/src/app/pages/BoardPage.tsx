@@ -115,6 +115,7 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [sessionReady, setSessionReady] = useState(false);
+  const [copied, setCopied] = useState(false);
   const presenceRef = useRef<PresenceApi | null>(null);
 
   // Throttled drag-move: buffer latest position per objectId, flush every 100ms
@@ -235,6 +236,12 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
     setEditingId(null);
   }, []);
 
+  const handleShare = useCallback(async () => {
+    await navigator.clipboard.writeText(window.location.href);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }, []);
+
   // Publish cursor position on mouse move (world coordinates)
   const handleMouseMove = useCallback(
     (e: Konva.KonvaEventObject<MouseEvent>) => {
@@ -320,6 +327,26 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
       />
 
       <PresenceRoster />
+
+      <button
+        onClick={handleShare}
+        style={{
+          position: 'absolute',
+          top: 16,
+          left: 16,
+          padding: '8px 16px',
+          background: copied ? '#4CAF50' : '#fff',
+          color: copied ? '#fff' : '#333',
+          border: '1px solid #ccc',
+          borderRadius: 4,
+          cursor: 'pointer',
+          fontSize: 14,
+          zIndex: 10,
+          transition: 'background 0.2s, color 0.2s',
+        }}
+      >
+        {copied ? 'Link Copied!' : 'Share'}
+      </button>
 
       <button
         onClick={resetView}
