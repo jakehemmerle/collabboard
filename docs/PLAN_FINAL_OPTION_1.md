@@ -63,9 +63,11 @@ Epic 3 (operations)    Epic 4 (connectors/frames)  ← parallel tracks
 
 ## Epic 0: Testing Infrastructure
 
+**Branch:** `feat/test-infrastructure`
+
 > Establish a test harness so every subsequent story ships with tests.
 
-### Story 0.1 — `test/setup-vitest`
+### Story 0.1 — Test Setup (Vitest)
 
 **Implements:** Vitest configuration, baseline unit tests for existing domain logic.
 
@@ -89,9 +91,11 @@ Epic 3 (operations)    Epic 4 (connectors/frames)  ← parallel tracks
 
 ## Epic 1: New Object Types (Circle, Line, Text)
 
+**Branch:** `feat/new-object-types`
+
 > Extend the discriminated-union pattern with three new shape types. Each follows the identical 7-file pattern established by sticky notes and rectangles.
 
-### Story 1.1 — `feat/circle-shape`
+### Story 1.1 — Circle Shape
 
 **Implements:** Circle objects with fill, stroke, radius. Rendered via `<Circle>` from react-konva.
 
@@ -109,7 +113,7 @@ Epic 3 (operations)    Epic 4 (connectors/frames)  ← parallel tracks
 
 **Dependencies:** Story 0.1
 
-### Story 1.2 — `feat/line-shape`
+### Story 1.2 — Line Shape
 
 **Implements:** Freestanding line segments (NOT connectors — no object references). Defined by start point (`x`, `y`) and end offset (`x2`, `y2`).
 
@@ -127,7 +131,7 @@ Epic 3 (operations)    Epic 4 (connectors/frames)  ← parallel tracks
 
 **Dependencies:** Story 0.1
 
-### Story 1.3 — `feat/text-element`
+### Story 1.3 — Text Element
 
 **Implements:** Standalone text objects (independent from sticky notes). Editable via double-click using the existing `TextEditor` overlay.
 
@@ -145,21 +149,23 @@ Epic 3 (operations)    Epic 4 (connectors/frames)  ← parallel tracks
 **Dependencies:** Story 0.1
 
 ### Epic 1 Acceptance Criteria
-- [ ] Circles, lines, and text elements are creatable from the toolbar
-- [ ] All three types are draggable, selectable (blue dashed border), and deletable
-- [ ] All three sync in real-time between users via Firestore
-- [ ] Color changes work for circles (fill) and lines (stroke)
-- [ ] Text elements are editable via double-click (reuses TextEditor)
-- [ ] Each type has unit tests for intent-handler cases
-- [ ] Typecheck and build pass
+- [x] Circles, lines, and text elements are creatable from the toolbar
+- [x] All three types are draggable, selectable (blue dashed border), and deletable
+- [x] All three sync in real-time between users via Firestore
+- [x] Color changes work for circles (fill) and lines (stroke)
+- [x] Text elements are editable via double-click (reuses TextEditor)
+- [x] Each type has unit tests for intent-handler cases
+- [x] Typecheck and build pass
 
 ---
 
 ## Epic 2: Selection & Transform System
 
+**Branch:** `feat/selection-transforms`
+
 > Replace single selection with multi-select, add visual resize handles and rotation.
 
-### Story 2.1 — `feat/multi-select`
+### Story 2.1 — Multi-Select
 
 **Implements:** Replace `selectedId: string | null` with `selectedIds: string[]`. Add shift-click toggle. Add rubber-band (drag-to-select) box on empty canvas.
 
@@ -176,7 +182,7 @@ Epic 3 (operations)    Epic 4 (connectors/frames)  ← parallel tracks
 
 **Dependencies:** Stories 1.1, 1.2, 1.3 (all types should exist so multi-select covers them)
 
-### Story 2.2 — `feat/resize-handles`
+### Story 2.2 — Resize Handles
 
 **Implements:** 8 resize handles (4 corners + 4 edge midpoints) around the selected object(s) bounding box. Dragging a handle fires a resize intent.
 
@@ -188,7 +194,7 @@ Epic 3 (operations)    Epic 4 (connectors/frames)  ← parallel tracks
 
 **Dependencies:** Story 2.1
 
-### Story 2.3 — `feat/rotate-objects`
+### Story 2.3 — Rotate Objects
 
 **Implements:** `rotation` property on `BoardObjectBase` (default 0). Rotate handle (circle above top-center of selection). All shape `<Group>` elements receive `rotation` prop.
 
@@ -216,9 +222,11 @@ Epic 3 (operations)    Epic 4 (connectors/frames)  ← parallel tracks
 
 ## Epic 3: Object Operations
 
+**Branch:** `feat/object-operations`
+
 > Duplicate, copy/paste, and keyboard shortcuts. Can run in **parallel** with Epic 4.
 
-### Story 3.1 — `feat/duplicate-objects`
+### Story 3.1 — Duplicate Objects
 
 **Implements:** Duplicate selected objects with +20/+20 offset, new IDs. Toolbar button + Cmd/Ctrl+D shortcut.
 
@@ -232,7 +240,7 @@ Epic 3 (operations)    Epic 4 (connectors/frames)  ← parallel tracks
 
 **Dependencies:** Story 2.1
 
-### Story 3.2 — `feat/copy-paste`
+### Story 3.2 — Copy & Paste
 
 **Implements:** Cmd+C copies selected objects to in-memory clipboard. Cmd+V pastes at viewport center with new IDs.
 
@@ -244,7 +252,7 @@ Epic 3 (operations)    Epic 4 (connectors/frames)  ← parallel tracks
 
 **Dependencies:** Story 3.1 (shares cloning logic)
 
-### Story 3.3 — `feat/keyboard-shortcuts`
+### Story 3.3 — Keyboard Shortcuts
 
 **Implements:** Centralized keyboard shortcut hook. Delete/Backspace deletes, Cmd+A selects all, Escape deselects, consolidates Cmd+D/C/V from prior stories.
 
@@ -266,9 +274,11 @@ Epic 3 (operations)    Epic 4 (connectors/frames)  ← parallel tracks
 
 ## Epic 4: Connectors & Frames
 
+**Branch:** `feat/connectors-frames`
+
 > More complex object types with object-to-object relationships. Can run in **parallel** with Epic 3.
 
-### Story 4.1 — `feat/connectors`
+### Story 4.1 — Connectors
 
 **Implements:** Arrow/line connectors referencing `sourceId` and `targetId`. Endpoints update when connected objects move. Click-source-then-click-target creation workflow.
 
@@ -286,7 +296,7 @@ Epic 3 (operations)    Epic 4 (connectors/frames)  ← parallel tracks
 
 **Dependencies:** Stories 1.1–1.3, Story 2.1
 
-### Story 4.2 — `feat/frames`
+### Story 4.2 — Frames
 
 **Implements:** Frame objects that visually group content. Moving a frame moves its children. Children computed on drop (objects whose center falls within frame bounds).
 
@@ -320,6 +330,8 @@ Epic 3 (operations)    Epic 4 (connectors/frames)  ← parallel tracks
 
 ## Epic 5: AI Board Agent
 
+**Branch:** `feat/ai-agent`
+
 > Chat-based AI agent using Claude via the **Vercel AI SDK** with **LangSmith** observability. Firebase Cloud Function v2 proxies LLM calls (keeps API key server-side). Tool execution happens server-side using Firebase Admin SDK to write directly to Firestore — all clients see changes via their existing `onSnapshot` listeners.
 
 ### Tech Stack for Epic 5
@@ -349,7 +361,7 @@ Instead, `useChat` must call the **direct Cloud Function URL** (e.g., `https://u
 
 The Cloud Function uses `cors: true` in its `onRequest` options to allow cross-origin requests from the Firebase Hosting domain.
 
-### Story 5.1 — `feat/ai-agent-scaffold`
+### Story 5.1 — AI Agent Scaffold
 
 **Implements:** New `ai-agent` module skeleton — contracts, Vercel AI SDK tool definitions, server-side tool executor (no LLM wiring yet).
 
@@ -367,7 +379,7 @@ The Cloud Function uses `cors: true` in its `onRequest` options to allow cross-o
 
 **Dependencies:** Epics 3 & 4 complete (all object types exist for tool schema)
 
-### Story 5.2 — `feat/ai-chat-ui`
+### Story 5.2 — AI Chat UI
 
 **Implements:** Slide-out chat panel on the board using `useChat` from `@ai-sdk/react`. Streaming responses render incrementally.
 
@@ -387,7 +399,7 @@ The Cloud Function uses `cors: true` in its `onRequest` options to allow cross-o
 
 **Dependencies:** Story 5.1
 
-### Story 5.3 — `feat/ai-llm-integration`
+### Story 5.3 — AI LLM Integration
 
 **Implements:** The Cloud Function that calls Claude via `streamText` from the Vercel AI SDK with the tool definitions from 5.1. Includes LangSmith tracing.
 
@@ -437,7 +449,7 @@ const streamText = wrapAISDK(baseStreamText);
 
 **Dependencies:** Story 5.2
 
-### Story 5.4 — `feat/ai-shared-state`
+### Story 5.4 — AI Shared State
 
 **Implements:** Persist AI chat history per board in Firestore so all users see the conversation and can continue it.
 
@@ -451,7 +463,7 @@ const streamText = wrapAISDK(baseStreamText);
 
 **Dependencies:** Story 5.3
 
-### Story 5.5 — `feat/ai-complex-commands`
+### Story 5.5 — AI Complex Commands
 
 **Implements:** Refined system prompt for multi-step commands (SWOT, journey maps, grids, retrospectives). Enhanced `getBoardState` tool for context-aware reasoning.
 
@@ -486,9 +498,11 @@ const streamText = wrapAISDK(baseStreamText);
 
 ## Epic 6: Performance & Polish
 
+**Branch:** `perf/performance-polish`
+
 > Optimize for 500+ objects, 5+ users, 60fps targets.
 
-### Story 6.1 — `perf/viewport-culling`
+### Story 6.1 — Viewport Culling
 
 **Implements:** Only render objects within the visible viewport. Memoize filtered list.
 
@@ -500,7 +514,7 @@ const streamText = wrapAISDK(baseStreamText);
 
 **Dependencies:** All prior epics
 
-### Story 6.2 — `perf/cursor-optimization`
+### Story 6.2 — Cursor Optimization
 
 **Implements:** Throttle cursor broadcasts, cull off-screen cursors, verify RTDB performance with 5+ users.
 
@@ -510,7 +524,7 @@ const streamText = wrapAISDK(baseStreamText);
 
 **Dependencies:** Story 6.1
 
-### Story 6.3 — `test/integration-tests`
+### Story 6.3 — Integration Tests
 
 **Implements:** Integration tests verifying cross-module interactions.
 
