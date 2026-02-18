@@ -2,6 +2,7 @@ import {
   doc,
   getDoc,
   setDoc,
+  updateDoc,
   onSnapshot,
   serverTimestamp,
 } from 'firebase/firestore';
@@ -90,15 +91,9 @@ export const boardAccessModule: AppModule<BoardAccessApi> = {
       async joinBoard(boardId) {
         const uid = requireUid();
         const boardRef = doc(db, 'boards', boardId);
-        await setDoc(
-          boardRef,
-          {
-            members: {
-              [uid]: { role: 'collaborator' as BoardRole, joinedAt: Date.now() },
-            },
-          },
-          { merge: true },
-        );
+        await updateDoc(boardRef, {
+          [`members.${uid}`]: { role: 'collaborator' as BoardRole, joinedAt: Date.now() },
+        });
       },
 
       async grantMembership(boardId, userId, role) {
