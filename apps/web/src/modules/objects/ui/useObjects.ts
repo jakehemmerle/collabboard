@@ -65,6 +65,18 @@ export function useObjects() {
     return getApi().applyLocal({ kind: 'delete', objectId });
   }, []);
 
+  const duplicateObjects = useCallback((objectIds: string[]) => {
+    return getApi().applyLocal({ kind: 'duplicate', objectIds });
+  }, []);
+
+  const copyToClipboard = useCallback((objectIds: string[]) => {
+    getApi().copyToClipboard(objectIds);
+  }, []);
+
+  const pasteFromClipboard = useCallback((centerX: number, centerY: number) => {
+    return getApi().pasteFromClipboard(centerX, centerY);
+  }, []);
+
   const selectObject = useCallback((objectId: string) => {
     getApi().select([objectId]);
   }, []);
@@ -95,6 +107,9 @@ export function useObjects() {
     updateText,
     updateColor,
     deleteObject,
+    duplicateObjects,
+    copyToClipboard,
+    pasteFromClipboard,
     selectObject,
     toggleSelect,
     selectAll,

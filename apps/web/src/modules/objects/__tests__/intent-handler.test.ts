@@ -313,4 +313,96 @@ describe('intent-handler', () => {
       expect(obj.fontSize).toBe(24);
     });
   });
+
+  describe('duplicate', () => {
+    it('duplicates a single sticky note with offset', () => {
+      const { objectId } = handleIntent({ kind: 'create-sticky', x: 100, y: 200, text: 'hello', color: 'pink' }, ACTOR);
+      const result = handleIntent({ kind: 'duplicate', objectIds: [objectId!] }, ACTOR);
+      expect(result.ok).toBe(true);
+      expect(result.objectId).toBeDefined();
+      expect(result.objectIds).toHaveLength(1);
+
+      const original = store.getObject(objectId!) as StickyNote;
+      const dup = store.getObject(result.objectId!) as StickyNote;
+      expect(dup.id).not.toBe(original.id);
+      expect(dup.x).toBe(120); // 100 + 20 offset
+      expect(dup.y).toBe(220); // 200 + 20 offset
+      expect(dup.text).toBe('hello');
+      expect(dup.color).toBe('pink');
+      expect(dup.type).toBe('sticky');
+    });
+
+    it('duplicates multiple objects', () => {
+      const r1 = handleIntent({ kind: 'create-sticky', x: 0, y: 0 }, ACTOR);
+      const r2 = handleIntent({ kind: 'create-rectangle', x: 100, y: 100 }, ACTOR);
+      const result = handleIntent({ kind: 'duplicate', objectIds: [r1.objectId!, r2.objectId!] }, ACTOR);
+      expect(result.ok).toBe(true);
+      expect(result.objectIds).toHaveLength(2);
+
+      // Total objects should be 4 (2 originals + 2 duplicates)
+      expect(store.getAllObjects()).toHaveLength(4);
+    });
+
+    it('preserves line x2/y2 with offset', () => {
+      const { objectId } = handleIntent({ kind: 'create-line', x: 10, y: 20, x2: 310, y2: 20 }, ACTOR);
+      const result = handleIntent({ kind: 'duplicate', objectIds: [objectId!] }, ACTOR);
+
+      const dup = store.getObject(result.objectId!) as LineObject;
+      expect(dup.x).toBe(30);  // 10 + 20
+      expect(dup.y).toBe(40);  // 20 + 20
+      expect(dup.x2).toBe(330); // 310 + 20
+      expect(dup.y2).toBe(40);  // 20 + 20
+    });
+
+    it('uses custom offset', () => {
+      const { objectId } = handleIntent({ kind: 'create-sticky', x: 0, y: 0 }, ACTOR);
+      const result = handleIntent({ kind: 'duplicate', objectIds: [objectId!], offsetX: 50, offsetY: 100 }, ACTOR);
+
+      const dup = store.getObject(result.objectId!);
+      expect(dup!.x).toBe(50);
+      expect(dup!.y).toBe(100);
+    });
+
+    it('skips nonexistent objects', () => {
+      const { objectId } = handleIntent({ kind: 'create-sticky', x: 0, y: 0 }, ACTOR);
+      const result = handleIntent({ kind: 'duplicate', objectIds: ['missing', objectId!] }, ACTOR);
+      expect(result.ok).toBe(true);
+      expect(result.objectIds).toHaveLength(1);
+      expect(store.getAllObjects()).toHaveLength(2);
+    });
+
+    it('returns ok with no IDs for empty array', () => {
+      const result = handleIntent({ kind: 'duplicate', objectIds: [] }, ACTOR);
+      expect(result.ok).toBe(true);
+      expect(result.objectIds).toHaveLength(0);
+    });
+
+    it('duplicates all object types preserving type-specific fields', () => {
+      const sticky = handleIntent({ kind: 'create-sticky', x: 0, y: 0, color: 'blue', text: 'test' }, ACTOR);
+      const rect = handleIntent({ kind: 'create-rectangle', x: 0, y: 0, fill: '#FF0000' }, ACTOR);
+      const circle = handleIntent({ kind: 'create-circle', x: 0, y: 0, fill: '#00FF00' }, ACTOR);
+      const text = handleIntent({ kind: 'create-text', x: 0, y: 0, text: 'hello', fontSize: 24 }, ACTOR);
+
+      const result = handleIntent({
+        kind: 'duplicate',
+        objectIds: [sticky.objectId!, rect.objectId!, circle.objectId!, text.objectId!],
+      }, ACTOR);
+
+      expect(result.objectIds).toHaveLength(4);
+
+      const dupSticky = store.getObject(result.objectIds![0]) as StickyNote;
+      expect(dupSticky.color).toBe('blue');
+      expect(dupSticky.text).toBe('test');
+
+      const dupRect = store.getObject(result.objectIds![1]) as RectangleObject;
+      expect(dupRect.fill).toBe('#FF0000');
+
+      const dupCircle = store.getObject(result.objectIds![2]) as CircleObject;
+      expect(dupCircle.fill).toBe('#00FF00');
+
+      const dupText = store.getObject(result.objectIds![3]) as TextObject;
+      expect(dupText.text).toBe('hello');
+      expect(dupText.fontSize).toBe(24);
+    });
+  });
 });

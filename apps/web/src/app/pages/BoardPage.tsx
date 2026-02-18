@@ -1,6 +1,7 @@
 import { useParams } from 'react-router';
 import { Stage, Layer } from 'react-konva';
 import { useEffect, useState, useCallback, useRef } from 'react';
+import { useKeyboardShortcuts } from '../../shared/hooks/useKeyboardShortcuts.ts';
 import { getModuleApi } from '../module-registry.ts';
 import { BOARD_ACCESS_MODULE_ID } from '../../modules/board-access/index.ts';
 import type { BoardAccessApi } from '../../modules/board-access/contracts.ts';
@@ -121,6 +122,9 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
     updateText,
     updateColor,
     deleteObject,
+    duplicateObjects,
+    copyToClipboard,
+    pasteFromClipboard,
     selectObject,
     toggleSelect,
     selectAll,
@@ -211,35 +215,27 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
     };
   }, [sessionReady, user, boardId]);
 
-  // Keyboard shortcuts
-  useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent) {
-      // Don't handle shortcuts when editing text
-      if (editingId) return;
-      const target = e.target as HTMLElement;
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
-
-      if (e.key === 'Delete' || e.key === 'Backspace') {
-        e.preventDefault();
-        for (const id of selectedIds) {
-          deleteObject(id);
-        }
-        deselectAll();
+  useKeyboardShortcuts({
+    onDelete: () => {
+      for (const id of selectedIds) {
+        deleteObject(id);
       }
-
-      if ((e.metaKey || e.ctrlKey) && e.key === 'a') {
-        e.preventDefault();
-        selectAll();
-      }
-
-      if (e.key === 'Escape') {
-        deselectAll();
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedIds, deleteObject, deselectAll, selectAll, editingId]);
+      deselectAll();
+    },
+    onSelectAll: selectAll,
+    onDuplicate: () => {
+      if (selectedIds.length > 0) duplicateObjects(selectedIds);
+    },
+    onCopy: () => {
+      if (selectedIds.length > 0) copyToClipboard(selectedIds);
+    },
+    onPaste: () => {
+      const center = getViewportCenter();
+      pasteFromClipboard(center.x, center.y);
+    },
+    onDeselect: deselectAll,
+    isEditing: editingId !== null,
+  });
 
   const selectedObjs = objects.filter((o) => selectedIds.includes(o.id));
   const firstSelected = selectedObjs[0] ?? null;
@@ -310,6 +306,12 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
   function handleChangeColor(color: string) {
     for (const obj of selectedObjs) {
       updateColor(obj.id, color);
+    }
+  }
+
+  function handleDuplicate() {
+    if (selectedIds.length > 0) {
+      duplicateObjects(selectedIds);
     }
   }
 
@@ -539,6 +541,7 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
         onCreateText={handleCreateText}
         onChangeColor={handleChangeColor}
         onDelete={handleDelete}
+        onDuplicate={selectedIds.length > 0 ? handleDuplicate : undefined}
       />
 
       <PresenceRoster />

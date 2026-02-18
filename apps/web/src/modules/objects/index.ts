@@ -6,6 +6,7 @@ import type { SyncApi } from '../sync/contracts.ts';
 import type { ObjectsApi, ObjectsState, ObjectIntent, BoardObject } from './contracts.ts';
 import { handleIntent } from './domain/intent-handler.ts';
 import * as store from './domain/object-store.ts';
+import * as clipboard from './domain/clipboard.ts';
 
 export const OBJECTS_MODULE_ID = 'objects';
 
@@ -45,10 +46,10 @@ export const objectsModule: AppModule<ObjectsApi> = {
         if (result.ok) {
           emitChange();
 
-          // Publish to sync (fire-and-forget)
-          if (result.objectId) {
-            pendingLocalOps.set(result.objectId, (pendingLocalOps.get(result.objectId) ?? 0) + 1);
+          // Collect all object IDs that need syncing
+          const idsToSync = result.objectIds ?? (result.objectId ? [result.objectId] : []);
 
+          if (idsToSync.length > 0) {
             let syncApi: SyncApi | null = null;
             try {
               syncApi = getModuleApi<SyncApi>('sync');
@@ -56,17 +57,21 @@ export const objectsModule: AppModule<ObjectsApi> = {
               // sync not available yet
             }
 
-            if (syncApi) {
-              if (intent.kind === 'delete') {
-                syncApi.publish(result.objectId, null).catch((err) => {
-                  console.error('[Objects] Sync publish failed:', err);
-                });
-              } else {
-                const obj = store.getObject(result.objectId);
-                if (obj) {
-                  syncApi.publish(result.objectId, { ...obj } as unknown as Record<string, unknown>).catch((err) => {
+            for (const oid of idsToSync) {
+              pendingLocalOps.set(oid, (pendingLocalOps.get(oid) ?? 0) + 1);
+
+              if (syncApi) {
+                if (intent.kind === 'delete') {
+                  syncApi.publish(oid, null).catch((err) => {
                     console.error('[Objects] Sync publish failed:', err);
                   });
+                } else {
+                  const obj = store.getObject(oid);
+                  if (obj) {
+                    syncApi.publish(oid, { ...obj } as unknown as Record<string, unknown>).catch((err) => {
+                      console.error('[Objects] Sync publish failed:', err);
+                    });
+                  }
                 }
               }
             }
@@ -104,6 +109,43 @@ export const objectsModule: AppModule<ObjectsApi> = {
           }
         }
         emitChange();
+      },
+
+      copyToClipboard(objectIds: string[]) {
+        clipboard.copy(objectIds);
+      },
+
+      pasteFromClipboard(centerX: number, centerY: number): string[] {
+        let authApi: AuthApi | null = null;
+        try {
+          authApi = getModuleApi<AuthApi>('auth');
+        } catch {
+          // auth not available yet
+        }
+        const actorId = authApi?.currentUser()?.uid ?? 'local';
+        const created = clipboard.paste(centerX, centerY, actorId);
+
+        if (created.length > 0) {
+          emitChange();
+
+          let syncApi: SyncApi | null = null;
+          try {
+            syncApi = getModuleApi<SyncApi>('sync');
+          } catch {
+            // sync not available yet
+          }
+
+          for (const obj of created) {
+            pendingLocalOps.set(obj.id, (pendingLocalOps.get(obj.id) ?? 0) + 1);
+            if (syncApi) {
+              syncApi.publish(obj.id, { ...obj } as unknown as Record<string, unknown>).catch((err) => {
+                console.error('[Objects] Sync publish failed:', err);
+              });
+            }
+          }
+        }
+
+        return created.map((o) => o.id);
       },
 
       hydrateFromSnapshot(objects: BoardObject[]) {

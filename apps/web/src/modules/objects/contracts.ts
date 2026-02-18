@@ -84,11 +84,13 @@ export type ObjectIntent =
   | { kind: 'update-color'; objectId: string; color: string }
   | { kind: 'resize'; objectId: string; width: number; height: number }
   | { kind: 'rotate'; objectId: string; rotation: number }
-  | { kind: 'delete'; objectId: string };
+  | { kind: 'delete'; objectId: string }
+  | { kind: 'duplicate'; objectIds: string[]; offsetX?: number; offsetY?: number };
 
 export interface ApplyResult {
   ok: boolean;
   objectId?: string;
+  objectIds?: string[];
 }
 
 // --- State ---
@@ -104,6 +106,8 @@ export interface ObjectsApi {
   applyLocal(intent: ObjectIntent): ApplyResult;
   applyRemote(event: { type: 'added' | 'modified' | 'removed'; objectId: string; data: Record<string, unknown> | null }): void;
   hydrateFromSnapshot(objects: BoardObject[]): void;
+  copyToClipboard(objectIds: string[]): void;
+  pasteFromClipboard(centerX: number, centerY: number): string[];
   select(ids: string[]): void;
   toggleSelect(id: string): void;
   selectAll(): void;

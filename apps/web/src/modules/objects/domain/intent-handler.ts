@@ -1,13 +1,32 @@
 import { generateId } from '../../../core/ids.ts';
 import type {
   ObjectIntent, ApplyResult, StickyNote, RectangleObject,
-  CircleObject, LineObject, TextObject,
+  CircleObject, LineObject, TextObject, BoardObject,
 } from '../contracts.ts';
 import {
   DEFAULT_STICKY_SIZE, DEFAULT_RECT_SIZE, DEFAULT_CIRCLE_SIZE,
   DEFAULT_LINE_LENGTH, DEFAULT_TEXT_SIZE,
 } from '../contracts.ts';
 import * as store from './object-store.ts';
+
+export function cloneObject(source: BoardObject, actorId: string, offsetX: number, offsetY: number): BoardObject {
+  const now = Date.now();
+  const newId = generateId();
+  const clone = {
+    ...source,
+    id: newId,
+    x: source.x + offsetX,
+    y: source.y + offsetY,
+    createdBy: actorId,
+    createdAt: now,
+    updatedAt: now,
+  };
+  if (source.type === 'line') {
+    (clone as LineObject).x2 = (source as LineObject).x2 + offsetX;
+    (clone as LineObject).y2 = (source as LineObject).y2 + offsetY;
+  }
+  return clone as BoardObject;
+}
 
 export function handleIntent(intent: ObjectIntent, actorId: string): ApplyResult {
   const now = Date.now();
@@ -115,6 +134,19 @@ export function handleIntent(intent: ObjectIntent, actorId: string): ApplyResult
     case 'delete': {
       store.removeObject(intent.objectId);
       return { ok: true, objectId: intent.objectId };
+    }
+    case 'duplicate': {
+      const newIds: string[] = [];
+      const ox = intent.offsetX ?? 20;
+      const oy = intent.offsetY ?? 20;
+      for (const sourceId of intent.objectIds) {
+        const source = store.getObject(sourceId);
+        if (!source) continue;
+        const clone = cloneObject(source, actorId, ox, oy);
+        store.addObject(clone);
+        newIds.push(clone.id);
+      }
+      return { ok: true, objectId: newIds[0], objectIds: newIds };
     }
   }
 }

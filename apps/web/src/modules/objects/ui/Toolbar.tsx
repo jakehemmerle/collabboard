@@ -11,6 +11,7 @@ interface ToolbarProps {
   onCreateText: () => void;
   onChangeColor: (color: string) => void;
   onDelete: () => void;
+  onDuplicate?: () => void;
 }
 
 const SHAPE_COLORS = ['#E0E0E0', '#EF9A9A', '#CE93D8', '#90CAF9', '#A5D6A7', '#FFE082'];
@@ -36,6 +37,7 @@ export function Toolbar({
   onCreateText,
   onChangeColor,
   onDelete,
+  onDuplicate,
 }: ToolbarProps) {
   return (
     <div style={toolbarStyle}>
@@ -90,6 +92,11 @@ export function Toolbar({
             ));
           })()}
           <div style={dividerStyle} />
+          {onDuplicate && (
+            <button onClick={onDuplicate} style={btnStyle} title="Duplicate (Cmd+D)">
+              ⧉ Duplicate
+            </button>
+          )}
           <button onClick={onDelete} style={{ ...btnStyle, color: '#D32F2F' }} title="Delete">
             ✕ Delete
           </button>
