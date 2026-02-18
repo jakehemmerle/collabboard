@@ -93,7 +93,7 @@ export interface ApplyResult {
 
 export interface ObjectsState {
   objects: BoardObject[];
-  selectedId: string | null;
+  selectedIds: string[];
 }
 
 // --- Module API ---
@@ -102,7 +102,10 @@ export interface ObjectsApi {
   applyLocal(intent: ObjectIntent): ApplyResult;
   applyRemote(event: { type: 'added' | 'modified' | 'removed'; objectId: string; data: Record<string, unknown> | null }): void;
   hydrateFromSnapshot(objects: BoardObject[]): void;
-  select(objectId: string | null): void;
+  select(ids: string[]): void;
+  toggleSelect(id: string): void;
+  selectAll(): void;
+  deselectAll(): void;
   getSnapshot(): ObjectsState;
   observeObjects(cb: (state: ObjectsState) => void): () => void;
 }

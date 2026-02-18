@@ -12,7 +12,7 @@ interface ObjectLayerProps {
 }
 
 export function ObjectLayer({ camera: _camera }: ObjectLayerProps) {
-  const { objects, selectedId, moveObject, selectObject } = useObjects();
+  const { objects, selectedIds, moveObject, selectObject } = useObjects();
 
   return (
     <Layer>
@@ -22,7 +22,7 @@ export function ObjectLayer({ camera: _camera }: ObjectLayerProps) {
             <StickyNoteShape
               key={obj.id}
               obj={obj}
-              isSelected={obj.id === selectedId}
+              isSelected={selectedIds.includes(obj.id)}
               onSelect={() => selectObject(obj.id)}
               onDragEnd={(x, y) => moveObject(obj.id, x, y)}
               onDblClick={() => {}}
@@ -35,7 +35,7 @@ export function ObjectLayer({ camera: _camera }: ObjectLayerProps) {
             <RectangleShape
               key={obj.id}
               obj={obj}
-              isSelected={obj.id === selectedId}
+              isSelected={selectedIds.includes(obj.id)}
               onSelect={() => selectObject(obj.id)}
               onDragEnd={(x, y) => moveObject(obj.id, x, y)}
             />
@@ -47,7 +47,7 @@ export function ObjectLayer({ camera: _camera }: ObjectLayerProps) {
             <CircleShape
               key={obj.id}
               obj={obj}
-              isSelected={obj.id === selectedId}
+              isSelected={selectedIds.includes(obj.id)}
               onSelect={() => selectObject(obj.id)}
               onDragEnd={(x, y) => moveObject(obj.id, x, y)}
             />
@@ -59,7 +59,7 @@ export function ObjectLayer({ camera: _camera }: ObjectLayerProps) {
             <LineShape
               key={obj.id}
               obj={obj}
-              isSelected={obj.id === selectedId}
+              isSelected={selectedIds.includes(obj.id)}
               onSelect={() => selectObject(obj.id)}
               onDragEnd={(x, y) => moveObject(obj.id, x, y)}
             />
@@ -71,7 +71,7 @@ export function ObjectLayer({ camera: _camera }: ObjectLayerProps) {
             <TextShape
               key={obj.id}
               obj={obj}
-              isSelected={obj.id === selectedId}
+              isSelected={selectedIds.includes(obj.id)}
               onSelect={() => selectObject(obj.id)}
               onDragEnd={(x, y) => moveObject(obj.id, x, y)}
               onDblClick={() => {}}

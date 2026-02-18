@@ -6,7 +6,7 @@ import type { LineObject } from '../contracts.ts';
 interface LineShapeProps {
   obj: LineObject;
   isSelected: boolean;
-  onSelect: () => void;
+  onSelect: (e: Konva.KonvaEventObject<MouseEvent | TouchEvent>) => void;
   onDragMove?: (x: number, y: number) => void;
   onDragEnd: (x: number, y: number) => void;
 }

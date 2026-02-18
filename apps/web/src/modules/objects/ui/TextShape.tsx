@@ -6,7 +6,7 @@ import type { TextObject } from '../contracts.ts';
 interface TextShapeProps {
   obj: TextObject;
   isSelected: boolean;
-  onSelect: () => void;
+  onSelect: (e: Konva.KonvaEventObject<MouseEvent | TouchEvent>) => void;
   onDragMove?: (x: number, y: number) => void;
   onDragEnd: (x: number, y: number) => void;
   onDblClick: () => void;

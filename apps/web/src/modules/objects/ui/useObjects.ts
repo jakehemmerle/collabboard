@@ -45,6 +45,10 @@ export function useObjects() {
     return getApi().applyLocal({ kind: 'move', objectId, x, y });
   }, []);
 
+  const resizeObject = useCallback((objectId: string, width: number, height: number) => {
+    return getApi().applyLocal({ kind: 'resize', objectId, width, height });
+  }, []);
+
   const updateText = useCallback((objectId: string, text: string) => {
     return getApi().applyLocal({ kind: 'update-text', objectId, text });
   }, []);
@@ -58,26 +62,37 @@ export function useObjects() {
   }, []);
 
   const selectObject = useCallback((objectId: string) => {
-    getApi().select(objectId);
+    getApi().select([objectId]);
+  }, []);
+
+  const toggleSelect = useCallback((objectId: string) => {
+    getApi().toggleSelect(objectId);
+  }, []);
+
+  const selectAll = useCallback(() => {
+    getApi().selectAll();
   }, []);
 
   const deselectAll = useCallback(() => {
-    getApi().select(null);
+    getApi().deselectAll();
   }, []);
 
   return {
     objects: state.objects,
-    selectedId: state.selectedId,
+    selectedIds: state.selectedIds,
     createSticky,
     createRectangle,
     createCircle,
     createLine,
     createText,
     moveObject,
+    resizeObject,
     updateText,
     updateColor,
     deleteObject,
     selectObject,
+    toggleSelect,
+    selectAll,
     deselectAll,
   };
 }

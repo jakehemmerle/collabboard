@@ -15,6 +15,8 @@ import { LineShape } from '../../modules/objects/ui/LineShape.tsx';
 import { TextShape } from '../../modules/objects/ui/TextShape.tsx';
 import { TextEditor } from '../../modules/objects/ui/TextEditor.tsx';
 import { Toolbar } from '../../modules/objects/ui/Toolbar.tsx';
+import { SelectionBox } from '../../modules/objects/ui/SelectionBox.tsx';
+import { getSelectionBoxBounds, isObjectInBounds } from '../../modules/objects/domain/geometry.ts';
 import type { StickyNote, TextObject } from '../../modules/objects/contracts.ts';
 import type { ViewportApi } from '../../modules/viewport/contracts.ts';
 import { VIEWPORT_MODULE_ID } from '../../modules/viewport/index.ts';
@@ -105,7 +107,7 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
   const { camera, stageProps, stageRef, resetView } = useViewport();
   const {
     objects,
-    selectedId,
+    selectedIds,
     createSticky,
     createRectangle,
     createCircle,
@@ -116,6 +118,8 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
     updateColor,
     deleteObject,
     selectObject,
+    toggleSelect,
+    selectAll,
     deselectAll,
   } = useObjects();
 
@@ -123,6 +127,10 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
   const [sessionReady, setSessionReady] = useState(false);
   const [copied, setCopied] = useState(false);
   const presenceRef = useRef<PresenceApi | null>(null);
+
+  // Rubber-band selection state
+  const [rubberBand, setRubberBand] = useState<{ startX: number; startY: number; endX: number; endY: number } | null>(null);
+  const isRubberBanding = useRef(false);
 
   // Throttled drag-move: buffer latest position per objectId, flush every 100ms
   const dragBufferRef = useRef<Map<string, { x: number; y: number }>>(new Map());
@@ -199,9 +207,38 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
     };
   }, [sessionReady, user, boardId]);
 
-  const selectedObj = selectedId !== null
-    ? objects.find((o) => o.id === selectedId) ?? null
-    : null;
+  // Keyboard shortcuts
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      // Don't handle shortcuts when editing text
+      if (editingId) return;
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
+
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.preventDefault();
+        for (const id of selectedIds) {
+          deleteObject(id);
+        }
+        deselectAll();
+      }
+
+      if ((e.metaKey || e.ctrlKey) && e.key === 'a') {
+        e.preventDefault();
+        selectAll();
+      }
+
+      if (e.key === 'Escape') {
+        deselectAll();
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedIds, deleteObject, deselectAll, selectAll, editingId]);
+
+  const selectedObjs = objects.filter((o) => selectedIds.includes(o.id));
+  const firstSelected = selectedObjs[0] ?? null;
 
   const editingObj = editingId !== null
     ? (objects.find((o) => o.id === editingId && (o.type === 'sticky' || o.type === 'text')) as StickyNote | TextObject | undefined)
@@ -238,11 +275,25 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
   }
 
   function handleChangeColor(color: string) {
-    if (selectedObj) updateColor(selectedObj.id, color);
+    for (const obj of selectedObjs) {
+      updateColor(obj.id, color);
+    }
   }
 
   function handleDelete() {
-    if (selectedObj) deleteObject(selectedObj.id);
+    for (const id of selectedIds) {
+      deleteObject(id);
+    }
+    deselectAll();
+  }
+
+  function handleObjectSelect(objectId: string, e: Konva.KonvaEventObject<MouseEvent | TouchEvent>) {
+    const shiftKey = 'shiftKey' in e.evt ? e.evt.shiftKey : false;
+    if (shiftKey) {
+      toggleSelect(objectId);
+    } else {
+      selectObject(objectId);
+    }
   }
 
   const handleTextSave = useCallback(
@@ -275,9 +326,52 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
       const vp = getModuleApi<ViewportApi>(VIEWPORT_MODULE_ID);
       const world = vp.screenToWorld({ x: pointer.x, y: pointer.y });
       api.publishCursor(world);
+
+      // Update rubber-band if active
+      if (isRubberBanding.current) {
+        setRubberBand((prev) => prev ? { ...prev, endX: world.x, endY: world.y } : null);
+      }
     },
     [],
   );
+
+  // Stage click: deselect or start rubber-band
+  function handleStageMouseDown(e: Konva.KonvaEventObject<MouseEvent>) {
+    if (e.target !== e.target.getStage()) return;
+    const stage = e.target.getStage();
+    if (!stage) return;
+    const pointer = stage.getPointerPosition();
+    if (!pointer) return;
+    const vp = getModuleApi<ViewportApi>(VIEWPORT_MODULE_ID);
+    const world = vp.screenToWorld({ x: pointer.x, y: pointer.y });
+
+    // Start rubber-band on empty canvas
+    isRubberBanding.current = true;
+    setRubberBand({ startX: world.x, startY: world.y, endX: world.x, endY: world.y });
+  }
+
+  function handleStageMouseUp() {
+    if (isRubberBanding.current && rubberBand) {
+      const bounds = getSelectionBoxBounds(rubberBand.startX, rubberBand.startY, rubberBand.endX, rubberBand.endY);
+      // Only select if the box is large enough (avoid accidental clicks)
+      if (bounds.width > 5 || bounds.height > 5) {
+        const ids = objects
+          .filter((obj) => isObjectInBounds(obj, bounds))
+          .map((obj) => obj.id);
+        if (ids.length > 0) {
+          const api = getModuleApi<import('../../modules/objects/contracts.ts').ObjectsApi>('objects');
+          api.select(ids);
+        } else {
+          deselectAll();
+        }
+      } else {
+        // Small drag = click on empty space = deselect
+        deselectAll();
+      }
+    }
+    isRubberBanding.current = false;
+    setRubberBand(null);
+  }
 
   return (
     <div style={{ width: '100vw', height: '100vh', overflow: 'hidden' }}>
@@ -286,19 +380,22 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
         width={width}
         height={height}
         {...stageProps}
-        onClick={(e) => { if (e.target === e.target.getStage()) deselectAll(); }}
+        onMouseDown={handleStageMouseDown}
+        onMouseUp={handleStageMouseUp}
         onMouseMove={handleMouseMove}
       >
         <BackgroundGrid camera={camera} width={width} height={height} />
         <Layer>
           {objects.map((obj) => {
+            const isSelected = selectedIds.includes(obj.id);
+
             if (obj.type === 'sticky') {
               return (
                 <StickyNoteShape
                   key={obj.id}
                   obj={obj}
-                  isSelected={obj.id === selectedId}
-                  onSelect={() => selectObject(obj.id)}
+                  isSelected={isSelected}
+                  onSelect={(e) => handleObjectSelect(obj.id, e)}
                   onDragMove={(x, y) => handleDragMove(obj.id, x, y)}
                   onDragEnd={(x, y) => moveObject(obj.id, x, y)}
                   onDblClick={() => setEditingId(obj.id)}
@@ -311,8 +408,8 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
                 <RectangleShape
                   key={obj.id}
                   obj={obj}
-                  isSelected={obj.id === selectedId}
-                  onSelect={() => selectObject(obj.id)}
+                  isSelected={isSelected}
+                  onSelect={(e) => handleObjectSelect(obj.id, e)}
                   onDragMove={(x, y) => handleDragMove(obj.id, x, y)}
                   onDragEnd={(x, y) => moveObject(obj.id, x, y)}
                 />
@@ -324,8 +421,8 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
                 <CircleShape
                   key={obj.id}
                   obj={obj}
-                  isSelected={obj.id === selectedId}
-                  onSelect={() => selectObject(obj.id)}
+                  isSelected={isSelected}
+                  onSelect={(e) => handleObjectSelect(obj.id, e)}
                   onDragMove={(x, y) => handleDragMove(obj.id, x, y)}
                   onDragEnd={(x, y) => moveObject(obj.id, x, y)}
                 />
@@ -337,8 +434,8 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
                 <LineShape
                   key={obj.id}
                   obj={obj}
-                  isSelected={obj.id === selectedId}
-                  onSelect={() => selectObject(obj.id)}
+                  isSelected={isSelected}
+                  onSelect={(e) => handleObjectSelect(obj.id, e)}
                   onDragMove={(x, y) => handleDragMove(obj.id, x, y)}
                   onDragEnd={(x, y) => moveObject(obj.id, x, y)}
                 />
@@ -350,8 +447,8 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
                 <TextShape
                   key={obj.id}
                   obj={obj}
-                  isSelected={obj.id === selectedId}
-                  onSelect={() => selectObject(obj.id)}
+                  isSelected={isSelected}
+                  onSelect={(e) => handleObjectSelect(obj.id, e)}
                   onDragMove={(x, y) => handleDragMove(obj.id, x, y)}
                   onDragEnd={(x, y) => moveObject(obj.id, x, y)}
                   onDblClick={() => setEditingId(obj.id)}
@@ -361,6 +458,15 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
 
             return null;
           })}
+          {rubberBand && (
+            <SelectionBox
+              startX={rubberBand.startX}
+              startY={rubberBand.startY}
+              endX={rubberBand.endX}
+              endY={rubberBand.endY}
+              visible={true}
+            />
+          )}
         </Layer>
         <CursorLayer />
       </Stage>
@@ -375,12 +481,12 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
       )}
 
       <Toolbar
-        selectedType={selectedObj?.type ?? null}
+        selectedType={firstSelected?.type ?? null}
         selectedColor={
-          selectedObj
-            ? selectedObj.type === 'sticky' ? selectedObj.color
-              : selectedObj.type === 'line' ? selectedObj.stroke
-              : 'fill' in selectedObj ? selectedObj.fill
+          firstSelected
+            ? firstSelected.type === 'sticky' ? firstSelected.color
+              : firstSelected.type === 'line' ? firstSelected.stroke
+              : 'fill' in firstSelected ? firstSelected.fill
               : null
             : null
         }

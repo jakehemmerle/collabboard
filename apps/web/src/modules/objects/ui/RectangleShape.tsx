@@ -6,7 +6,7 @@ import type { RectangleObject } from '../contracts.ts';
 interface RectangleShapeProps {
   obj: RectangleObject;
   isSelected: boolean;
-  onSelect: () => void;
+  onSelect: (e: Konva.KonvaEventObject<MouseEvent | TouchEvent>) => void;
   onDragMove?: (x: number, y: number) => void;
   onDragEnd: (x: number, y: number) => void;
 }

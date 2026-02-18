@@ -15,12 +15,12 @@ type ObjectsEvents = {
 
 export const objectsEvents = new EventBus<ObjectsEvents>();
 
-let selectedId: string | null = null;
+let selectedIds: string[] = [];
 // Track pending local writes per objectId (count-based so multiple writes each get their echo suppressed)
 const pendingLocalOps = new Map<string, number>();
 
 function getState(): ObjectsState {
-  return { objects: store.getAllObjects(), selectedId };
+  return { objects: store.getAllObjects(), selectedIds };
 }
 
 function emitChange(): void {
@@ -97,8 +97,8 @@ export const objectsModule: AppModule<ObjectsApi> = {
           }
           case 'removed': {
             store.removeObject(event.objectId);
-            if (selectedId === event.objectId) {
-              selectedId = null;
+            if (selectedIds.includes(event.objectId)) {
+              selectedIds = selectedIds.filter((id) => id !== event.objectId);
             }
             break;
           }
@@ -108,12 +108,31 @@ export const objectsModule: AppModule<ObjectsApi> = {
 
       hydrateFromSnapshot(objects: BoardObject[]) {
         store.hydrateFromSnapshot(objects);
-        selectedId = null;
+        selectedIds = [];
         emitChange();
       },
 
-      select(objectId: string | null) {
-        selectedId = objectId;
+      select(ids: string[]) {
+        selectedIds = ids;
+        emitChange();
+      },
+
+      toggleSelect(id: string) {
+        if (selectedIds.includes(id)) {
+          selectedIds = selectedIds.filter((sid) => sid !== id);
+        } else {
+          selectedIds = [...selectedIds, id];
+        }
+        emitChange();
+      },
+
+      selectAll() {
+        selectedIds = store.getAllObjects().map((o) => o.id);
+        emitChange();
+      },
+
+      deselectAll() {
+        selectedIds = [];
         emitChange();
       },
 
@@ -129,7 +148,7 @@ export const objectsModule: AppModule<ObjectsApi> = {
 
   async dispose() {
     store.clear();
-    selectedId = null;
+    selectedIds = [];
     pendingLocalOps.clear();
   },
 };
