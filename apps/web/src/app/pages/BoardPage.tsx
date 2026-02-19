@@ -32,6 +32,9 @@ import type { PresenceApi } from '../../modules/presence/contracts.ts';
 import { PRESENCE_MODULE_ID } from '../../modules/presence/index.ts';
 import { CursorLayer } from '../../modules/presence/ui/CursorLayer.tsx';
 import { PresenceRoster } from '../../modules/presence/ui/PresenceRoster.tsx';
+import { AiChatPanel } from '../../modules/ai-agent/ui/AiChatPanel.tsx';
+import { subscribeToChatMessages, persistChatMessages } from '../../modules/ai-agent/infrastructure/chat-sync.ts';
+import type { UIMessage } from 'ai';
 import type Konva from 'konva';
 
 type BoardState =
@@ -141,6 +144,22 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
   const [sessionReady, setSessionReady] = useState(false);
   const [copied, setCopied] = useState(false);
   const presenceRef = useRef<PresenceApi | null>(null);
+
+  // AI chat: load persisted messages and subscribe to updates
+  const [aiInitialMessages, setAiInitialMessages] = useState<UIMessage[] | undefined>(undefined);
+  useEffect(() => {
+    const unsub = subscribeToChatMessages(boardId, (msgs) => {
+      // Only set initial messages on first load (before user starts chatting)
+      setAiInitialMessages((prev) => prev === undefined ? msgs : prev);
+    });
+    return unsub;
+  }, [boardId]);
+
+  const handleAiNewMessages = useCallback((messages: UIMessage[]) => {
+    persistChatMessages(boardId, messages).catch((err) => {
+      console.error('[BoardPage] Failed to persist AI messages:', err);
+    });
+  }, [boardId]);
 
   // Connector creation mode: click source, then click target
   const [connectorMode, setConnectorMode] = useState(false);
@@ -714,6 +733,12 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
           </button>
         </div>
       )}
+
+      <AiChatPanel
+        boardId={boardId}
+        initialMessages={aiInitialMessages}
+        onNewMessages={handleAiNewMessages}
+      />
     </div>
   );
 }

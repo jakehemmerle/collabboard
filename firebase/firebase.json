@@ -6,6 +6,11 @@
   "database": {
     "rules": "database.rules.json"
   },
+  "functions": {
+    "source": "functions",
+    "runtime": "nodejs20",
+    "predeploy": ["npm --prefix functions run build"]
+  },
   "hosting": {
     "public": "public",
     "predeploy": ["rm -rf public && cp -r ../apps/web/dist public"],
@@ -29,6 +34,9 @@
     },
     "hosting": {
       "port": 5050
+    },
+    "functions": {
+      "port": 5001
     },
     "ui": {
       "enabled": true,

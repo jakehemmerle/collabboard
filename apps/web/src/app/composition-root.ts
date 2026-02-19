@@ -10,6 +10,7 @@ import { objectsModule } from '../modules/objects/index.ts';
 import { syncModule } from '../modules/sync/index.ts';
 import { boardSessionModule } from '../modules/board-session/index.ts';
 import { presenceModule } from '../modules/presence/index.ts';
+import { aiAgentModule } from '../modules/ai-agent/index.ts';
 
 let appEnv: AppEnv | null = null;
 
@@ -27,6 +28,7 @@ export async function initApp(): Promise<AppEnv> {
   registerModule(syncModule);
   registerModule(boardSessionModule);
   registerModule(presenceModule);
+  registerModule(aiAgentModule);
   await initModules({ env: appEnv });
 
   return appEnv;

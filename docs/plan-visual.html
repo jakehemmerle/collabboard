@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CollabBoard — Implementation Plan</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #242836;
+    --border: #2e3348;
+    --text: #e4e6f0;
+    --text-muted: #8b8fa8;
+    --accent: #6c5ce7;
+    --accent-dim: #5a4bd1;
+    --green: #00b894;
+    --green-dim: rgba(0,184,148,0.15);
+    --yellow: #fdcb6e;
+    --yellow-dim: rgba(253,203,110,0.15);
+    --red: #e17055;
+    --blue: #74b9ff;
+    --blue-dim: rgba(116,185,255,0.15);
+    --pink: #fd79a8;
+    --orange: #e17055;
+    --cyan: #81ecec;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+  .container { max-width: 1400px; margin: 0 auto; padding: 40px 24px; }
+
+  /* Header */
+  .header { text-align: center; margin-bottom: 48px; }
+  .header h1 {
+    font-size: 2.5rem; font-weight: 800;
+    background: linear-gradient(135deg, var(--accent), var(--blue), var(--cyan));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    margin-bottom: 8px;
+  }
+  .header p { color: var(--text-muted); font-size: 1.1rem; }
+
+  /* Stats bar */
+  .stats-bar {
+    display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;
+    margin-bottom: 48px;
+  }
+  .stat {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 28px;
+    text-align: center;
+    min-width: 140px;
+  }
+  .stat-value { font-size: 2rem; font-weight: 700; }
+  .stat-label { font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+
+  /* Section titles */
+  .section-title {
+    font-size: 1.4rem; font-weight: 700;
+    margin-bottom: 24px; padding-bottom: 8px;
+    border-bottom: 2px solid var(--border);
+    display: flex; align-items: center; gap: 12px;
+  }
+  .section-title .icon { font-size: 1.5rem; }
+
+  /* Dependency Graph */
+  .dep-graph {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px;
+    margin-bottom: 48px;
+    overflow-x: auto;
+  }
+  .dep-graph svg { width: 100%; height: auto; display: block; }
+
+  /* Epic grid */
+  .epics-grid {
+    display: flex; flex-direction: column; gap: 32px;
+    margin-bottom: 48px;
+  }
+
+  /* Epic card */
+  .epic {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+  .epic-header {
+    padding: 20px 24px;
+    display: flex; align-items: center; gap: 16px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .epic-header:hover { background: var(--surface2); }
+  .epic-number {
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 1.1rem;
+    flex-shrink: 0;
+  }
+  .epic-info { flex: 1; }
+  .epic-info h3 { font-size: 1.15rem; font-weight: 700; }
+  .epic-info p { font-size: 0.85rem; color: var(--text-muted); margin-top: 2px; }
+  .epic-meta {
+    display: flex; gap: 12px; align-items: center;
+  }
+  .badge {
+    padding: 4px 12px; border-radius: 20px;
+    font-size: 0.75rem; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .badge-done { background: var(--green-dim); color: var(--green); }
+  .badge-progress { background: var(--yellow-dim); color: var(--yellow); }
+  .badge-todo { background: var(--blue-dim); color: var(--blue); }
+  .badge-parallel { background: rgba(108,92,231,0.15); color: var(--accent); }
+  .story-count { color: var(--text-muted); font-size: 0.85rem; }
+
+  /* Stories */
+  .stories { padding: 16px 24px 24px; }
+  .story {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-bottom: 12px;
+    display: flex; gap: 16px; align-items: flex-start;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .story:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  }
+  .story:last-child { margin-bottom: 0; }
+  .story-id {
+    font-size: 0.75rem; color: var(--text-muted);
+    font-weight: 700; white-space: nowrap;
+    min-width: 56px; padding-top: 2px;
+  }
+  .story-content { flex: 1; }
+  .story-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 4px; }
+  .story-desc { font-size: 0.82rem; color: var(--text-muted); }
+  .story-deps {
+    display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px;
+  }
+  .dep-tag {
+    font-size: 0.7rem; padding: 2px 8px;
+    background: rgba(116,185,255,0.1);
+    color: var(--blue); border-radius: 4px;
+    font-weight: 600;
+  }
+  .story-status {
+    width: 10px; height: 10px;
+    border-radius: 50%; flex-shrink: 0;
+    margin-top: 6px;
+  }
+  .status-done { background: var(--green); box-shadow: 0 0 8px rgba(0,184,148,0.4); }
+  .status-progress { background: var(--yellow); box-shadow: 0 0 8px rgba(253,203,110,0.4); }
+  .status-todo { background: var(--blue); box-shadow: 0 0 8px rgba(116,185,255,0.3); }
+
+  /* Tech stack */
+  .tech-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px; margin-bottom: 48px;
+  }
+  .tech-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+  .tech-card h4 { font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  .tech-card p { font-weight: 600; font-size: 1rem; }
+
+  /* Performance targets */
+  .perf-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 16px; margin-bottom: 48px;
+  }
+  .perf-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px; text-align: center;
+  }
+  .perf-card .target { font-size: 1.5rem; font-weight: 800; color: var(--green); }
+  .perf-card .metric { font-size: 0.82rem; color: var(--text-muted); margin-top: 4px; }
+
+  /* Legend */
+  .legend {
+    display: flex; gap: 24px; justify-content: center;
+    margin-bottom: 32px; flex-wrap: wrap;
+  }
+  .legend-item { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--text-muted); }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+  /* Chevron */
+  .chevron {
+    width: 20px; height: 20px; transition: transform 0.2s;
+    color: var(--text-muted);
+  }
+  .epic.collapsed .chevron { transform: rotate(-90deg); }
+  .epic.collapsed .stories { display: none; }
+
+  /* Architecture patterns */
+  .arch-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    margin-bottom: 48px;
+  }
+  .arch-section h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 16px; }
+  .pattern-list { list-style: none; }
+  .pattern-list li {
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.9rem;
+    display: flex; gap: 10px;
+  }
+  .pattern-list li:last-child { border-bottom: none; }
+  .pattern-key {
+    color: var(--accent);
+    font-weight: 600;
+    min-width: 160px;
+    flex-shrink: 0;
+  }
+
+  /* Colors per epic */
+  .epic-0 .epic-number { background: rgba(129,236,236,0.15); color: var(--cyan); }
+  .epic-1 .epic-number { background: rgba(116,185,255,0.15); color: var(--blue); }
+  .epic-2 .epic-number { background: rgba(108,92,231,0.15); color: var(--accent); }
+  .epic-3 .epic-number { background: rgba(253,203,110,0.15); color: var(--yellow); }
+  .epic-4 .epic-number { background: rgba(253,121,168,0.15); color: var(--pink); }
+  .epic-5 .epic-number { background: rgba(225,112,85,0.15); color: var(--orange); }
+  .epic-6 .epic-number { background: rgba(0,184,148,0.15); color: var(--green); }
+
+  /* SVG graph styling */
+  .graph-node {
+    rx: 8; ry: 8;
+    stroke-width: 2;
+    cursor: pointer;
+    transition: filter 0.2s;
+  }
+  .graph-node:hover { filter: brightness(1.3); }
+  .graph-label {
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    fill: var(--text);
+    pointer-events: none;
+    text-anchor: middle;
+  }
+  .graph-sublabel {
+    font-family: 'Inter', sans-serif;
+    font-size: 9px;
+    fill: var(--text-muted);
+    pointer-events: none;
+    text-anchor: middle;
+  }
+  .graph-edge {
+    stroke: var(--border);
+    stroke-width: 2;
+    fill: none;
+    marker-end: url(#arrowhead);
+  }
+
+  @media (max-width: 768px) {
+    .header h1 { font-size: 1.8rem; }
+    .stats-bar { gap: 8px; }
+    .stat { min-width: 100px; padding: 12px 16px; }
+    .stat-value { font-size: 1.5rem; }
+    .story { flex-direction: column; gap: 8px; }
+    .pattern-list li { flex-direction: column; gap: 4px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <!-- Header -->
+  <div class="header">
+    <h1>CollabBoard Implementation Plan</h1>
+    <p>Post-MVP roadmap: 6 Epics, 20 Stories — Real-time collaborative whiteboard with AI agent</p>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-bar">
+    <div class="stat">
+      <div class="stat-value" style="color: var(--accent)">6</div>
+      <div class="stat-label">Epics</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value" style="color: var(--blue)">20</div>
+      <div class="stat-label">Stories</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value" style="color: var(--green)">12</div>
+      <div class="stat-label">Done</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value" style="color: var(--yellow)">1</div>
+      <div class="stat-label">In Progress</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value" style="color: var(--text-muted)">7</div>
+      <div class="stat-label">Remaining</div>
+    </div>
+  </div>
+
+  <!-- Legend -->
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot status-done"></div> Complete</div>
+    <div class="legend-item"><div class="legend-dot status-progress"></div> In Progress</div>
+    <div class="legend-item"><div class="legend-dot status-todo"></div> To Do</div>
+  </div>
+
+  <!-- Dependency Graph -->
+  <div class="section-title"><span class="icon">&#x1F5FA;</span> Dependency Graph</div>
+  <div class="dep-graph">
+    <svg viewBox="0 0 1000 520" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+          <polygon points="0 0, 8 3, 0 6" fill="#4a4f6a"/>
+        </marker>
+      </defs>
+
+      <!-- Row 0: Epic 0 -->
+      <rect class="graph-node" x="430" y="10" width="140" height="44" fill="rgba(129,236,236,0.12)" stroke="#81ecec"/>
+      <text class="graph-label" x="500" y="30">Story 0.1</text>
+      <text class="graph-sublabel" x="500" y="42">Test Setup</text>
+      <circle cx="578" cy="16" r="5" fill="#00b894"/>
+
+      <!-- Row 1: Epic 1 (parallel) -->
+      <rect class="graph-node" x="140" y="100" width="140" height="44" fill="rgba(116,185,255,0.12)" stroke="#74b9ff"/>
+      <text class="graph-label" x="210" y="120">Story 1.1</text>
+      <text class="graph-sublabel" x="210" y="132">Circle</text>
+      <circle cx="288" cy="106" r="5" fill="#00b894"/>
+
+      <rect class="graph-node" x="430" y="100" width="140" height="44" fill="rgba(116,185,255,0.12)" stroke="#74b9ff"/>
+      <text class="graph-label" x="500" y="120">Story 1.2</text>
+      <text class="graph-sublabel" x="500" y="132">Line</text>
+      <circle cx="578" cy="106" r="5" fill="#00b894"/>
+
+      <rect class="graph-node" x="720" y="100" width="140" height="44" fill="rgba(116,185,255,0.12)" stroke="#74b9ff"/>
+      <text class="graph-label" x="790" y="120">Story 1.3</text>
+      <text class="graph-sublabel" x="790" y="132">Text</text>
+      <circle cx="868" cy="106" r="5" fill="#00b894"/>
+
+      <!-- Row 2: Epic 2 -->
+      <rect class="graph-node" x="430" y="190" width="140" height="44" fill="rgba(108,92,231,0.12)" stroke="#6c5ce7"/>
+      <text class="graph-label" x="500" y="210">Story 2.1</text>
+      <text class="graph-sublabel" x="500" y="222">Multi-Select</text>
+      <circle cx="578" cy="196" r="5" fill="#00b894"/>
+
+      <rect class="graph-node" x="430" y="250" width="140" height="44" fill="rgba(108,92,231,0.12)" stroke="#6c5ce7"/>
+      <text class="graph-label" x="500" y="270">Story 2.2</text>
+      <text class="graph-sublabel" x="500" y="282">Resize Handles</text>
+      <circle cx="578" cy="256" r="5" fill="#00b894"/>
+
+      <rect class="graph-node" x="430" y="310" width="140" height="44" fill="rgba(108,92,231,0.12)" stroke="#6c5ce7"/>
+      <text class="graph-label" x="500" y="330">Story 2.3</text>
+      <text class="graph-sublabel" x="500" y="342">Rotate</text>
+      <circle cx="578" cy="316" r="5" fill="#00b894"/>
+
+      <!-- Row 3: Epics 3 & 4 (parallel tracks) -->
+      <rect class="graph-node" x="100" y="400" width="120" height="40" fill="rgba(253,203,110,0.12)" stroke="#fdcb6e"/>
+      <text class="graph-label" x="160" y="416">Story 3.1</text>
+      <text class="graph-sublabel" x="160" y="428">Duplicate</text>
+      <circle cx="228" cy="406" r="5" fill="#00b894"/>
+
+      <rect class="graph-node" x="240" y="400" width="120" height="40" fill="rgba(253,203,110,0.12)" stroke="#fdcb6e"/>
+      <text class="graph-label" x="300" y="416">Story 3.2</text>
+      <text class="graph-sublabel" x="300" y="428">Copy/Paste</text>
+      <circle cx="368" cy="406" r="5" fill="#00b894"/>
+
+      <rect class="graph-node" x="380" y="400" width="120" height="40" fill="rgba(253,203,110,0.12)" stroke="#fdcb6e"/>
+      <text class="graph-label" x="440" y="416">Story 3.3</text>
+      <text class="graph-sublabel" x="440" y="428">Shortcuts</text>
+      <circle cx="508" cy="406" r="5" fill="#00b894"/>
+
+      <rect class="graph-node" x="600" y="400" width="120" height="40" fill="rgba(253,121,168,0.12)" stroke="#fd79a8"/>
+      <text class="graph-label" x="660" y="416">Story 4.1</text>
+      <text class="graph-sublabel" x="660" y="428">Connectors</text>
+      <circle cx="728" cy="406" r="5" fill="#00b894"/>
+
+      <rect class="graph-node" x="740" y="400" width="120" height="40" fill="rgba(253,121,168,0.12)" stroke="#fd79a8"/>
+      <text class="graph-label" x="800" y="416">Story 4.2</text>
+      <text class="graph-sublabel" x="800" y="428">Frames</text>
+      <circle cx="868" cy="406" r="5" fill="#00b894"/>
+
+      <!-- Row 4: Epic 5 -->
+      <rect class="graph-node" x="140" y="480" width="120" height="40" fill="rgba(225,112,85,0.12)" stroke="#e17055"/>
+      <text class="graph-label" x="200" y="496">Story 5.1</text>
+      <text class="graph-sublabel" x="200" y="508">AI Scaffold</text>
+      <circle cx="268" cy="486" r="5" fill="#fdcb6e"/>
+
+      <rect class="graph-node" x="280" y="480" width="120" height="40" fill="rgba(225,112,85,0.12)" stroke="#e17055"/>
+      <text class="graph-label" x="340" y="496">Story 5.2</text>
+      <text class="graph-sublabel" x="340" y="508">Chat UI</text>
+      <circle cx="408" cy="486" r="5" fill="#74b9ff"/>
+
+      <rect class="graph-node" x="420" y="480" width="120" height="40" fill="rgba(225,112,85,0.12)" stroke="#e17055"/>
+      <text class="graph-label" x="480" y="496">Story 5.3</text>
+      <text class="graph-sublabel" x="480" y="508">LLM Integration</text>
+      <circle cx="548" cy="486" r="5" fill="#74b9ff"/>
+
+      <rect class="graph-node" x="580" y="470" width="120" height="40" fill="rgba(225,112,85,0.12)" stroke="#e17055"/>
+      <text class="graph-label" x="640" y="486">Story 5.4</text>
+      <text class="graph-sublabel" x="640" y="498">Shared State</text>
+      <circle cx="708" cy="476" r="5" fill="#74b9ff"/>
+
+      <rect class="graph-node" x="580" y="516" width="120" height="40" fill="rgba(225,112,85,0.12)" stroke="#e17055"/>
+      <text class="graph-label" x="640" y="532">Story 5.5</text>
+      <text class="graph-sublabel" x="640" y="544">Complex Cmds</text>
+      <circle cx="708" cy="522" r="5" fill="#74b9ff"/>
+
+      <!-- Edges: 0.1 → 1.x -->
+      <path class="graph-edge" d="M 460 54 L 240 100"/>
+      <path class="graph-edge" d="M 500 54 L 500 100"/>
+      <path class="graph-edge" d="M 540 54 L 760 100"/>
+
+      <!-- Edges: 1.x → 2.1 -->
+      <path class="graph-edge" d="M 240 144 L 470 190"/>
+      <path class="graph-edge" d="M 500 144 L 500 190"/>
+      <path class="graph-edge" d="M 760 144 L 530 190"/>
+
+      <!-- Edges: 2.1 → 2.2 → 2.3 -->
+      <path class="graph-edge" d="M 500 234 L 500 250"/>
+      <path class="graph-edge" d="M 500 294 L 500 310"/>
+
+      <!-- Edges: 2.3 → Epic 3 and Epic 4 -->
+      <path class="graph-edge" d="M 460 354 L 200 400"/>
+      <path class="graph-edge" d="M 540 354 L 700 400"/>
+
+      <!-- Edges: 3.1 → 3.2 → 3.3 -->
+      <path class="graph-edge" d="M 220 420 L 240 420"/>
+      <path class="graph-edge" d="M 360 420 L 380 420"/>
+
+      <!-- Edges: 4.1 → 4.2 -->
+      <path class="graph-edge" d="M 720 420 L 740 420"/>
+
+      <!-- Edges: 3.3 + 4.2 → 5.1 -->
+      <path class="graph-edge" d="M 440 440 L 230 480"/>
+      <path class="graph-edge" d="M 760 440 L 230 480"/>
+
+      <!-- Edges: 5.1 → 5.2 → 5.3 -->
+      <path class="graph-edge" d="M 260 500 L 280 500"/>
+      <path class="graph-edge" d="M 400 500 L 420 500"/>
+
+      <!-- Edges: 5.3 → 5.4, 5.5 (parallel) -->
+      <path class="graph-edge" d="M 540 490 L 580 490"/>
+      <path class="graph-edge" d="M 540 500 L 580 530"/>
+
+      <!-- Parallel indicator labels -->
+      <text x="40" y="420" font-size="11" fill="#fdcb6e" font-weight="700" font-family="Inter, sans-serif">Epic 3</text>
+      <text x="620" y="390" font-size="11" fill="#fd79a8" font-weight="700" font-family="Inter, sans-serif">Epic 4</text>
+      <text x="350" y="468" font-size="10" fill="#4a4f6a" font-family="Inter, sans-serif">&#x2194; parallel tracks</text>
+      <text x="700" y="468" font-size="10" fill="#4a4f6a" font-family="Inter, sans-serif">&#x2195; parallel</text>
+
+      <!-- Row labels -->
+      <text x="10" y="35" font-size="10" fill="#81ecec" font-weight="700" font-family="Inter, sans-serif">EPIC 0</text>
+      <text x="10" y="125" font-size="10" fill="#74b9ff" font-weight="700" font-family="Inter, sans-serif">EPIC 1</text>
+      <text x="10" y="270" font-size="10" fill="#6c5ce7" font-weight="700" font-family="Inter, sans-serif">EPIC 2</text>
+      <text x="10" y="500" font-size="10" fill="#e17055" font-weight="700" font-family="Inter, sans-serif">EPIC 5</text>
+    </svg>
+  </div>
+
+  <!-- Architecture Patterns -->
+  <div class="section-title"><span class="icon">&#x2699;</span> Architecture Patterns</div>
+  <div class="arch-section">
+    <ul class="pattern-list">
+      <li><span class="pattern-key">Object Types</span> Discriminated union in contracts.ts (BoardObjectType, BoardObject, ObjectIntent)</li>
+      <li><span class="pattern-key">Intent Processing</span> intent-handler.ts switch-case per intent kind</li>
+      <li><span class="pattern-key">In-Memory Store</span> object-store.ts Map-based CRUD</li>
+      <li><span class="pattern-key">Rendering</span> ObjectLayer.tsx conditional per obj.type, each type gets a *Shape.tsx component</li>
+      <li><span class="pattern-key">React Bridge</span> useObjects.ts hook via useSyncExternalStore</li>
+      <li><span class="pattern-key">Sync Pipeline</span> applyLocal() &rarr; Firestore write &rarr; onSnapshot &rarr; applyRemote() with echo suppression</li>
+      <li><span class="pattern-key">Module Comms</span> getModuleApi&lt;T&gt;(moduleId) service locator</li>
+    </ul>
+  </div>
+
+  <!-- Epic Cards -->
+  <div class="section-title"><span class="icon">&#x1F4CB;</span> Epics &amp; Stories</div>
+  <div class="epics-grid">
+
+    <!-- Epic 0 -->
+    <div class="epic epic-0 collapsed" onclick="this.classList.toggle('collapsed')">
+      <div class="epic-header">
+        <div class="epic-number">0</div>
+        <div class="epic-info">
+          <h3>Testing Infrastructure</h3>
+          <p>Vitest setup, baseline unit tests for existing domain logic</p>
+        </div>
+        <div class="epic-meta">
+          <span class="badge badge-done">Done</span>
+          <span class="story-count">1 story</span>
+        </div>
+        <svg class="chevron" viewBox="0 0 20 20" fill="currentColor"><path d="M6 8l4 4 4-4"/></svg>
+      </div>
+      <div class="stories">
+        <div class="story">
+          <div class="story-status status-done"></div>
+          <div class="story-id">0.1</div>
+          <div class="story-content">
+            <div class="story-title">Test Setup (Vitest)</div>
+            <div class="story-desc">Vitest configuration, baseline unit tests for object-store, intent-handler, camera</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Epic 1 -->
+    <div class="epic epic-1 collapsed" onclick="this.classList.toggle('collapsed')">
+      <div class="epic-header">
+        <div class="epic-number">1</div>
+        <div class="epic-info">
+          <h3>New Object Types</h3>
+          <p>Circle, Line, and Text elements — extends discriminated-union pattern</p>
+        </div>
+        <div class="epic-meta">
+          <span class="badge badge-done">Done</span>
+          <span class="badge badge-parallel">Parallel</span>
+          <span class="story-count">3 stories</span>
+        </div>
+        <svg class="chevron" viewBox="0 0 20 20" fill="currentColor"><path d="M6 8l4 4 4-4"/></svg>
+      </div>
+      <div class="stories">
+        <div class="story">
+          <div class="story-status status-done"></div>
+          <div class="story-id">1.1</div>
+          <div class="story-content">
+            <div class="story-title">Circle Shape</div>
+            <div class="story-desc">Circle objects with fill, stroke, radius. Rendered via react-konva &lt;Circle&gt;</div>
+            <div class="story-deps"><span class="dep-tag">depends: 0.1</span></div>
+          </div>
+        </div>
+        <div class="story">
+          <div class="story-status status-done"></div>
+          <div class="story-id">1.2</div>
+          <div class="story-content">
+            <div class="story-title">Line Shape</div>
+            <div class="story-desc">Freestanding line segments with start/end points, stroke, strokeWidth</div>
+            <div class="story-deps"><span class="dep-tag">depends: 0.1</span></div>
+          </div>
+        </div>
+        <div class="story">
+          <div class="story-status status-done"></div>
+          <div class="story-id">1.3</div>
+          <div class="story-content">
+            <div class="story-title">Text Element</div>
+            <div class="story-desc">Standalone text objects, editable via double-click with TextEditor overlay</div>
+            <div class="story-deps"><span class="dep-tag">depends: 0.1</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Epic 2 -->
+    <div class="epic epic-2 collapsed" onclick="this.classList.toggle('collapsed')">
+      <div class="epic-header">
+        <div class="epic-number">2</div>
+        <div class="epic-info">
+          <h3>Selection &amp; Transform System</h3>
+          <p>Multi-select with shift-click, rubber-band, resize handles, and rotation</p>
+        </div>
+        <div class="epic-meta">
+          <span class="badge badge-done">Done</span>
+          <span class="story-count">3 stories</span>
+        </div>
+        <svg class="chevron" viewBox="0 0 20 20" fill="currentColor"><path d="M6 8l4 4 4-4"/></svg>
+      </div>
+      <div class="stories">
+        <div class="story">
+          <div class="story-status status-done"></div>
+          <div class="story-id">2.1</div>
+          <div class="story-content">
+            <div class="story-title">Multi-Select</div>
+            <div class="story-desc">selectedIds array, shift-click toggle, rubber-band drag-to-select on empty canvas</div>
+            <div class="story-deps"><span class="dep-tag">depends: 1.1, 1.2, 1.3</span></div>
+          </div>
+        </div>
+        <div class="story">
+          <div class="story-status status-done"></div>
+          <div class="story-id">2.2</div>
+          <div class="story-content">
+            <div class="story-title">Resize Handles</div>
+            <div class="story-desc">8 directional handles (4 corners + 4 edges) with min-size enforcement (20x20)</div>
+            <div class="story-deps"><span class="dep-tag">depends: 2.1</span></div>
+          </div>
+        </div>
+        <div class="story">
+          <div class="story-status status-done"></div>
+          <div class="story-id">2.3</div>
+          <div class="story-content">
+            <div class="story-title">Rotate Objects</div>
+            <div class="story-desc">Rotation property on all objects, rotation handle above top-center of selection</div>
+            <div class="story-deps"><span class="dep-tag">depends: 2.2</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Epic 3 -->
+    <div class="epic epic-3 collapsed" onclick="this.classList.toggle('collapsed')">
+      <div class="epic-header">
+        <div class="epic-number">3</div>
+        <div class="epic-info">
+          <h3>Object Operations</h3>
+          <p>Duplicate, copy/paste, keyboard shortcuts — parallel with Epic 4</p>
+        </div>
+        <div class="epic-meta">
+          <span class="badge badge-done">Done</span>
+          <span class="badge badge-parallel">|| Epic 4</span>
+          <span class="story-count">3 stories</span>
+        </div>
+        <svg class="chevron" viewBox="0 0 20 20" fill="currentColor"><path d="M6 8l4 4 4-4"/></svg>
+      </div>
+      <div class="stories">
+        <div class="story">
+          <div class="story-status status-done"></div>
+          <div class="story-id">3.1</div>
+          <div class="story-content">
+            <div class="story-title">Duplicate Objects</div>
+            <div class="story-desc">Clone selected objects with +20/+20 offset, new IDs. Cmd/Ctrl+D shortcut</div>
+            <div class="story-deps"><span class="dep-tag">depends: 2.1</span></div>
+          </div>
+        </div>
+        <div class="story">
+          <div class="story-status status-done"></div>
+          <div class="story-id">3.2</div>
+          <div class="story-content">
+            <div class="story-title">Copy &amp; Paste</div>
+            <div class="story-desc">Cmd+C to in-memory clipboard, Cmd+V pastes at viewport center with new IDs</div>
+            <div class="story-deps"><span class="dep-tag">depends: 3.1</span></div>
+          </div>
+        </div>
+        <div class="story">
+          <div class="story-status status-done"></div>
+          <div class="story-id">3.3</div>
+          <div class="story-content">
+            <div class="story-title">Keyboard Shortcuts</div>
+            <div class="story-desc">Centralized hook: Delete, Cmd+A, Escape, consolidates Cmd+D/C/V</div>
+            <div class="story-deps"><span class="dep-tag">depends: 3.1, 3.2</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Epic 4 -->
+    <div class="epic epic-4 collapsed" onclick="this.classList.toggle('collapsed')">
+      <div class="epic-header">
+        <div class="epic-number">4</div>
+        <div class="epic-info">
+          <h3>Connectors &amp; Frames</h3>
+          <p>Object-to-object relationships — parallel with Epic 3</p>
+        </div>
+        <div class="epic-meta">
+          <span class="badge badge-done">Done</span>
+          <span class="badge badge-parallel">|| Epic 3</span>
+          <span class="story-count">2 stories</span>
+        </div>
+        <svg class="chevron" viewBox="0 0 20 20" fill="currentColor"><path d="M6 8l4 4 4-4"/></svg>
+      </div>
+      <div class="stories">
+        <div class="story">
+          <div class="story-status status-done"></div>
+          <div class="story-id">4.1</div>
+          <div class="story-content">
+            <div class="story-title">Connectors</div>
+            <div class="story-desc">Arrow/line connectors referencing sourceId/targetId. Click-source-then-click-target creation</div>
+            <div class="story-deps"><span class="dep-tag">depends: 1.x, 2.1</span></div>
+          </div>
+        </div>
+        <div class="story">
+          <div class="story-status status-done"></div>
+          <div class="story-id">4.2</div>
+          <div class="story-content">
+            <div class="story-title">Frames</div>
+            <div class="story-desc">Grouping containers: moving a frame moves children. Children computed by AABB on drop</div>
+            <div class="story-deps"><span class="dep-tag">depends: 1.x, 2.1</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Epic 5 -->
+    <div class="epic epic-5" onclick="this.classList.toggle('collapsed')">
+      <div class="epic-header">
+        <div class="epic-number">5</div>
+        <div class="epic-info">
+          <h3>AI Board Agent</h3>
+          <p>Chat-based AI via Claude + Vercel AI SDK, Firebase Cloud Function proxy, LangSmith observability</p>
+        </div>
+        <div class="epic-meta">
+          <span class="badge badge-progress">In Progress</span>
+          <span class="story-count">5 stories</span>
+        </div>
+        <svg class="chevron" viewBox="0 0 20 20" fill="currentColor"><path d="M6 8l4 4 4-4"/></svg>
+      </div>
+      <div class="stories">
+        <div class="story">
+          <div class="story-status status-progress"></div>
+          <div class="story-id">5.1</div>
+          <div class="story-content">
+            <div class="story-title">AI Agent Scaffold</div>
+            <div class="story-desc">Module skeleton, Cloud Function scaffold, Vercel AI SDK tool definitions for all 9 board tools, Firebase Admin executor</div>
+            <div class="story-deps"><span class="dep-tag">depends: Epics 3 &amp; 4</span></div>
+          </div>
+        </div>
+        <div class="story">
+          <div class="story-status status-todo"></div>
+          <div class="story-id">5.2</div>
+          <div class="story-content">
+            <div class="story-title">AI Chat UI</div>
+            <div class="story-desc">Slide-out chat panel using useChat from @ai-sdk/react, streaming responses, toggle button</div>
+            <div class="story-deps"><span class="dep-tag">depends: 5.1</span></div>
+          </div>
+        </div>
+        <div class="story">
+          <div class="story-status status-todo"></div>
+          <div class="story-id">5.3</div>
+          <div class="story-content">
+            <div class="story-title">AI LLM Integration</div>
+            <div class="story-desc">Cloud Function calling Claude via streamText, maxSteps agentic loop, LangSmith tracing, SSE streaming via direct function URL</div>
+            <div class="story-deps"><span class="dep-tag">depends: 5.2</span></div>
+          </div>
+        </div>
+        <div class="story">
+          <div class="story-status status-todo"></div>
+          <div class="story-id">5.4</div>
+          <div class="story-content">
+            <div class="story-title">AI Shared State</div>
+            <div class="story-desc">Persist AI chat history per board in Firestore, hydrate useChat with initialMessages</div>
+            <div class="story-deps"><span class="dep-tag">depends: 5.3</span><span class="dep-tag" style="background:rgba(108,92,231,0.1);color:var(--accent);">|| 5.5</span></div>
+          </div>
+        </div>
+        <div class="story">
+          <div class="story-status status-todo"></div>
+          <div class="story-id">5.5</div>
+          <div class="story-content">
+            <div class="story-title">AI Complex Commands</div>
+            <div class="story-desc">Enhanced system prompt for SWOT, journey maps, grids, retrospectives. Context-aware getBoardState</div>
+            <div class="story-deps"><span class="dep-tag">depends: 5.3</span><span class="dep-tag" style="background:rgba(108,92,231,0.1);color:var(--accent);">|| 5.4</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Epic 6 -->
+    <div class="epic epic-6 collapsed" onclick="this.classList.toggle('collapsed')">
+      <div class="epic-header">
+        <div class="epic-number">6</div>
+        <div class="epic-info">
+          <h3>Performance &amp; Polish</h3>
+          <p>Viewport culling, cursor optimization, integration tests — 500+ objects, 60fps targets</p>
+        </div>
+        <div class="epic-meta">
+          <span class="badge badge-todo">Todo</span>
+          <span class="story-count">3 stories</span>
+        </div>
+        <svg class="chevron" viewBox="0 0 20 20" fill="currentColor"><path d="M6 8l4 4 4-4"/></svg>
+      </div>
+      <div class="stories">
+        <div class="story">
+          <div class="story-status status-todo"></div>
+          <div class="story-id">6.1</div>
+          <div class="story-content">
+            <div class="story-title">Viewport Culling</div>
+            <div class="story-desc">Only render objects in visible viewport. Memoize filtered list. Batch Firestore writes</div>
+            <div class="story-deps"><span class="dep-tag">depends: All prior epics</span></div>
+          </div>
+        </div>
+        <div class="story">
+          <div class="story-status status-todo"></div>
+          <div class="story-id">6.2</div>
+          <div class="story-content">
+            <div class="story-title">Cursor Optimization</div>
+            <div class="story-desc">Throttle cursor broadcasts, cull off-screen cursors, verify RTDB with 5+ users</div>
+            <div class="story-deps"><span class="dep-tag">depends: 6.1</span></div>
+          </div>
+        </div>
+        <div class="story">
+          <div class="story-status status-todo"></div>
+          <div class="story-id">6.3</div>
+          <div class="story-content">
+            <div class="story-title">Integration Tests</div>
+            <div class="story-desc">Cross-module integration tests: full intent &rarr; store &rarr; serialization cycle, AI tool executor</div>
+            <div class="story-deps"><span class="dep-tag">depends: All prior stories</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Tech Stack -->
+  <div class="section-title"><span class="icon">&#x1F527;</span> Tech Stack</div>
+  <div class="tech-grid">
+    <div class="tech-card">
+      <h4>Frontend</h4>
+      <p>React + Vite + Konva.js</p>
+    </div>
+    <div class="tech-card">
+      <h4>Backend</h4>
+      <p>Firebase (Firestore, RTDB, Auth)</p>
+    </div>
+    <div class="tech-card">
+      <h4>AI Integration</h4>
+      <p>Vercel AI SDK + Claude + LangSmith</p>
+    </div>
+    <div class="tech-card">
+      <h4>AI Proxy</h4>
+      <p>Firebase Cloud Functions v2</p>
+    </div>
+    <div class="tech-card">
+      <h4>State Sync</h4>
+      <p>Firestore onSnapshot + RTDB Presence</p>
+    </div>
+    <div class="tech-card">
+      <h4>Deployment</h4>
+      <p>Firebase Hosting</p>
+    </div>
+  </div>
+
+  <!-- Performance Targets -->
+  <div class="section-title"><span class="icon">&#x26A1;</span> Performance Targets</div>
+  <div class="perf-grid">
+    <div class="perf-card">
+      <div class="target">60 FPS</div>
+      <div class="metric">Pan, zoom, object manipulation</div>
+    </div>
+    <div class="perf-card">
+      <div class="target">&lt;100ms</div>
+      <div class="metric">Object sync latency</div>
+    </div>
+    <div class="perf-card">
+      <div class="target">&lt;50ms</div>
+      <div class="metric">Cursor sync latency</div>
+    </div>
+    <div class="perf-card">
+      <div class="target">500+</div>
+      <div class="metric">Objects without perf drops</div>
+    </div>
+    <div class="perf-card">
+      <div class="target">5+</div>
+      <div class="metric">Concurrent users</div>
+    </div>
+    <div class="perf-card">
+      <div class="target">&lt;2s</div>
+      <div class="metric">AI single-step commands</div>
+    </div>
+  </div>
+
+  <!-- AI Tools -->
+  <div class="section-title"><span class="icon">&#x1F916;</span> AI Agent — 9 Tool Definitions</div>
+  <div class="tech-grid">
+    <div class="tech-card">
+      <h4>Creation</h4>
+      <p>createStickyNote &bull; createShape &bull; createFrame &bull; createConnector</p>
+    </div>
+    <div class="tech-card">
+      <h4>Manipulation</h4>
+      <p>moveObject &bull; resizeObject &bull; updateText &bull; changeColor</p>
+    </div>
+    <div class="tech-card">
+      <h4>Context</h4>
+      <p>getBoardState — reads current board for context-aware reasoning</p>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // Expand Epic 5 by default since it's in progress
+  // All others start collapsed via the 'collapsed' class
+</script>
+
+</body>
+</html>

@@ -38,11 +38,11 @@ bv
 br ready              # Show issues ready to work (no blockers)
 br list --status=open # All open issues
 br show <id>          # Full issue details with dependencies
-br create --title="..." --type=task --priority=2
+br create -t task -p 2 "Issue title here"
 br update <id> --status=in_progress
 br close <id> --reason="Completed"
 br close <id1> <id2>  # Close multiple issues at once
-br sync               # Commit and push changes
+br sync               # Export beads DB to .beads/issues.jsonl (does NOT run git)
 ```
 
 ### Workflow Pattern
@@ -66,10 +66,9 @@ br sync               # Commit and push changes
 
 ```bash
 git status              # Check what changed
-git add <files>         # Stage code changes
-br sync                 # Commit beads changes
-git commit -m "..."     # Commit code
-br sync                 # Commit any new beads changes
+br sync                 # Export beads DB to .beads/issues.jsonl
+git add <files>         # Stage code changes (including .beads/)
+git commit -m "..."     # Commit code + beads changes
 git push                # Push to remote
 ```
 
@@ -178,3 +177,6 @@ bv --robot-insights | jq '.Cycles'                         # Circular deps (must
 ```
 
 ---
+
+
+Read @docs/onboard.md and its included files thoroughly before starting any task.
