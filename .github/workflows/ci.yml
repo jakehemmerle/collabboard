@@ -59,7 +59,10 @@ jobs:
           name: dist
           path: apps/web/dist
 
+      - name: Install functions dependencies
+        run: cd firebase/functions && npm ci
+
       - name: Deploy to Firebase
-        run: npx firebase-tools deploy --only hosting --non-interactive --config firebase/firebase.json --project collabboard-dev-9f339
+        run: npx firebase-tools deploy --only hosting,functions,firestore:rules --non-interactive --config firebase/firebase.json --project collabboard-dev-9f339
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
