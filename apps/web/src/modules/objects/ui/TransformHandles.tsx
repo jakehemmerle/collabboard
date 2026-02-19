@@ -38,6 +38,12 @@ export const TransformHandles = React.memo(function TransformHandles({
   onRotateEnd,
 }: TransformHandlesProps) {
   const originalBoundsRef = useRef<BoundingBox | null>(null);
+  // Capture the handle's position at drag start so delta computation
+  // is always relative to a fixed reference point, not the re-rendered bounds.
+  const dragStartPosRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  // Capture rotation center at drag start to avoid stale-closure issues
+  // if bounds ever change during rotation (e.g., axis-aligned bounding box).
+  const rotationCenterRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
   const centerX = bounds.x + bounds.width / 2;
   const rotateHandleY = bounds.y - ROTATION_HANDLE_OFFSET;
@@ -73,11 +79,12 @@ export const TransformHandles = React.memo(function TransformHandles({
             draggable
             onDragStart={() => {
               originalBoundsRef.current = bounds;
+              dragStartPosRef.current = { x: hx - HANDLE_SIZE / 2, y: hy - HANDLE_SIZE / 2 };
             }}
             onDragMove={(e) => {
               const node = e.target;
-              const dx = node.x() - (hx - HANDLE_SIZE / 2);
-              const dy = node.y() - (hy - HANDLE_SIZE / 2);
+              const dx = node.x() - dragStartPosRef.current.x;
+              const dy = node.y() - dragStartPosRef.current.y;
               const newBounds = computeResize(
                 h.key,
                 dx,
@@ -88,14 +95,15 @@ export const TransformHandles = React.memo(function TransformHandles({
             }}
             onDragEnd={(e) => {
               const node = e.target;
-              const dx = node.x() - (hx - HANDLE_SIZE / 2);
-              const dy = node.y() - (hy - HANDLE_SIZE / 2);
+              const dx = node.x() - dragStartPosRef.current.x;
+              const dy = node.y() - dragStartPosRef.current.y;
               const newBounds = computeResize(
                 h.key,
                 dx,
                 dy,
                 originalBoundsRef.current!,
               );
+              // Reset handle to its current bounds position
               node.x(hx - HANDLE_SIZE / 2);
               node.y(hy - HANDLE_SIZE / 2);
               onResizeEnd(newBounds);
@@ -121,19 +129,20 @@ export const TransformHandles = React.memo(function TransformHandles({
         stroke="#2196F3"
         strokeWidth={1}
         draggable
+        onDragStart={() => {
+          rotationCenterRef.current = { x: centerX, y: bounds.y + bounds.height / 2 };
+        }}
         onDragMove={(e) => {
           if (!onRotate) return;
           const node = e.target;
-          const center = { x: centerX, y: bounds.y + bounds.height / 2 };
           const mousePos = { x: node.x(), y: node.y() };
-          const rotation = computeRotation(center, mousePos);
+          const rotation = computeRotation(rotationCenterRef.current, mousePos);
           onRotate(rotation);
         }}
         onDragEnd={(e) => {
           const node = e.target;
-          const center = { x: centerX, y: bounds.y + bounds.height / 2 };
           const mousePos = { x: node.x(), y: node.y() };
-          const rotation = computeRotation(center, mousePos);
+          const rotation = computeRotation(rotationCenterRef.current, mousePos);
           // Reset handle to original position
           node.x(centerX);
           node.y(rotateHandleY);
