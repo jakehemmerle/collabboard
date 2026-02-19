@@ -78,6 +78,10 @@ export const syncModule: AppModule<SyncApi> = {
           clearTimeout(reconnectTimer);
           reconnectTimer = null;
         }
+        // Flush any buffered writes before disconnecting
+        if (currentBoardId) {
+          await firestore.flushWrites(currentBoardId);
+        }
         firestore.unsubscribe();
         currentBoardId = null;
         actorId = null;
@@ -99,6 +103,11 @@ export const syncModule: AppModule<SyncApi> = {
           return;
         }
         await firestore.write(currentBoardId, objectId, data);
+      },
+
+      async flushWrites() {
+        if (!currentBoardId) return;
+        await firestore.flushWrites(currentBoardId);
       },
 
       onRemoteChange(cb) {

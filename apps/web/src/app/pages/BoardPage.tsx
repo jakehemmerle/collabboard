@@ -1,6 +1,6 @@
 import { useParams } from 'react-router';
 import { Stage, Layer } from 'react-konva';
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useKeyboardShortcuts } from '../../shared/hooks/useKeyboardShortcuts.ts';
 import { getModuleApi } from '../module-registry.ts';
 import { BOARD_ACCESS_MODULE_ID } from '../../modules/board-access/index.ts';
@@ -23,6 +23,7 @@ import { getSelectionBoxBounds, isObjectInBounds, getBoundingBox } from '../../m
 import type { BoundingBox } from '../../modules/objects/domain/geometry.ts';
 import { TransformHandles } from '../../modules/objects/ui/TransformHandles.tsx';
 import { findObjectsInBounds } from '../../modules/objects/domain/frame-logic.ts';
+import { computeViewportBounds, getVisibleObjects } from '../../modules/objects/domain/viewport-culling.ts';
 import type { StickyNote, TextObject, FrameObject, ConnectorObject } from '../../modules/objects/contracts.ts';
 import type { ViewportApi } from '../../modules/viewport/contracts.ts';
 import { VIEWPORT_MODULE_ID } from '../../modules/viewport/index.ts';
@@ -139,6 +140,16 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
     createFrame,
     updateFrameChildren,
   } = useObjects();
+
+  // Viewport culling: compute visible objects for rendering
+  const viewportBounds = useMemo(
+    () => computeViewportBounds(camera, width, height),
+    [camera, width, height],
+  );
+  const visibleObjects = useMemo(
+    () => getVisibleObjects(objects, viewportBounds),
+    [objects, viewportBounds],
+  );
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [sessionReady, setSessionReady] = useState(false);
@@ -507,8 +518,8 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
       >
         <BackgroundGrid camera={camera} width={width} height={height} />
         <Layer>
-          {/* Frames render first (behind everything) */}
-          {objects.filter((o) => o.type === 'frame').map((obj) => {
+          {/* Frames render first (behind everything) — only visible ones */}
+          {visibleObjects.filter((o) => o.type === 'frame').map((obj) => {
             if (obj.type !== 'frame') return null;
             return (
               <FrameShape
@@ -523,8 +534,8 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
             );
           })}
 
-          {/* Connectors render below regular objects */}
-          {objects.filter((o) => o.type === 'connector').map((obj) => {
+          {/* Connectors render below regular objects — only visible ones */}
+          {visibleObjects.filter((o) => o.type === 'connector').map((obj) => {
             if (obj.type !== 'connector') return null;
             const conn = obj as ConnectorObject;
             return (
@@ -539,8 +550,8 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
             );
           })}
 
-          {/* Regular objects on top */}
-          {objects.filter((o) => o.type !== 'frame' && o.type !== 'connector').map((obj) => {
+          {/* Regular objects on top — only visible ones */}
+          {visibleObjects.filter((o) => o.type !== 'frame' && o.type !== 'connector').map((obj) => {
             const isSelected = selectedIds.includes(obj.id);
 
             if (obj.type === 'sticky') {
@@ -631,7 +642,7 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
             />
           )}
         </Layer>
-        <CursorLayer />
+        <CursorLayer viewportBounds={viewportBounds} />
       </Stage>
 
       {editingObj && (

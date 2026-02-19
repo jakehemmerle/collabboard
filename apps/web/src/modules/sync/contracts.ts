@@ -17,5 +17,6 @@ export interface SyncApi {
   status(): SyncConnectionStatus;
   observeStatus(cb: (status: SyncConnectionStatus) => void): () => void;
   publish(objectId: string, data: Record<string, unknown> | null): Promise<void>;
+  flushWrites(): Promise<void>;
   onRemoteChange(cb: (events: SyncEvent[]) => void): () => void;
 }

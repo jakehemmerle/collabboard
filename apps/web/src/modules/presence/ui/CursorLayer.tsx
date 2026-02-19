@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Group, Line, Rect, Text, Layer } from 'react-konva';
+import type { ViewportBounds } from '../../objects/domain/viewport-culling.ts';
 import { useCursors } from './useCursors.ts';
 
 const CURSOR_SIZE = 16;
@@ -49,12 +50,23 @@ function RemoteCursor({
 
 const MemoizedCursor = React.memo(RemoteCursor);
 
-export function CursorLayer() {
+export function CursorLayer({ viewportBounds }: { viewportBounds?: ViewportBounds }) {
   const cursors = useCursors();
+
+  const visibleCursors = useMemo(() => {
+    if (!viewportBounds) return cursors;
+    return cursors.filter(
+      (cursor) =>
+        cursor.x >= viewportBounds.minX &&
+        cursor.x <= viewportBounds.maxX &&
+        cursor.y >= viewportBounds.minY &&
+        cursor.y <= viewportBounds.maxY,
+    );
+  }, [cursors, viewportBounds]);
 
   return (
     <Layer listening={false}>
-      {cursors.map((cursor) => (
+      {visibleCursors.map((cursor) => (
         <MemoizedCursor
           key={cursor.uid}
           x={cursor.x}
