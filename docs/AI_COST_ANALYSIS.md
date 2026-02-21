@@ -24,7 +24,7 @@
 | Average input tokens per command | ~13,242 | 264,840 / 20 traces (Feb 18 sample) |
 | Average output tokens per command | ~604 | 12,070 / 20 traces (Feb 18 sample) |
 | Average tool calls per command | ~4.4 | 88 total tool calls / 20 traces (Feb 18 sample) |
-| Total tool calls (Feb 18) | 88 | 64 createStickyNote + 22 createFrame + 1 moveObject + 1 getBoardState; resizeObject also observed in later traces |
+| Total tool calls (Feb 18) | 88 | Primarily createStickyNote (~64) + createFrame (~22) + moveObject + getBoardState; later traces also use createMultipleObjects, deleteObject, resizeObject |
 | Total LangSmith traces | 38 | LangSmith collabboard project |
 | Total cost (Feb 18 sample) | $0.98 | LangSmith cost tracking (20 traces) |
 | Average cost per command | $0.049 | $0.98 / 20 traces (Feb 18 sample) |
@@ -64,7 +64,7 @@ Using Claude Sonnet 4 pricing: **$3/M input tokens, $15/M output tokens**
 **Fixed overhead per request:**
 
 - System prompt: ~600 tokens
-- Tool definitions (10 tools with Zod schemas): ~800 tokens
+- Tool definitions (12 tools with Zod schemas): ~800 tokens
 - Accumulated per agentic step: previous messages + tool call/result pairs (~200-500 tokens each)
 - `getBoardState` response: ~50 tokens per board object
 - `maxSteps: 10` allows up to 10 agentic reasoning cycles
