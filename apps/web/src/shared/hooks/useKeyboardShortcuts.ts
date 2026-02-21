@@ -7,6 +7,9 @@ interface KeyboardShortcutHandlers {
   onCopy: () => void;
   onPaste: () => void;
   onDeselect: () => void;
+  onUndo: () => void;
+  onRedo: () => void;
+  onShowHelp?: () => void;
   isEditing: boolean;
 }
 
@@ -20,6 +23,18 @@ export function useKeyboardShortcuts(handlers: KeyboardShortcutHandlers): void {
       if (e.key === 'Delete' || e.key === 'Backspace') {
         e.preventDefault();
         handlers.onDelete();
+      }
+
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        handlers.onRedo();
+        return;
+      }
+
+      if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
+        e.preventDefault();
+        handlers.onUndo();
+        return;
       }
 
       if ((e.metaKey || e.ctrlKey) && e.key === 'a') {
@@ -40,6 +55,12 @@ export function useKeyboardShortcuts(handlers: KeyboardShortcutHandlers): void {
       if ((e.metaKey || e.ctrlKey) && e.key === 'd') {
         e.preventDefault();
         handlers.onDuplicate();
+      }
+
+      if (e.key === '?' && handlers.onShowHelp) {
+        e.preventDefault();
+        handlers.onShowHelp();
+        return;
       }
 
       if (e.key === 'Escape') {

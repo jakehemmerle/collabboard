@@ -5,7 +5,9 @@ import type { UIMessage } from 'ai';
 import { AiMessageBubble } from './AiMessageBubble.tsx';
 import { getModuleApi } from '../../../app/module-registry.ts';
 import { AI_AGENT_MODULE_ID } from '../index.ts';
+import { AUTH_MODULE_ID } from '../../auth/index.ts';
 import type { AiAgentApi } from '../contracts.ts';
+import type { AuthApi } from '../../auth/contracts.ts';
 
 interface AiChatPanelProps {
   boardId: string;
@@ -31,6 +33,11 @@ export function AiChatPanel({ boardId, initialMessages, onNewMessages }: AiChatP
     () => new DefaultChatTransport({
       api: functionUrl,
       body: { boardId },
+      headers: async (): Promise<Record<string, string>> => {
+        const authApi = getModuleApi<AuthApi>(AUTH_MODULE_ID);
+        const token = await authApi.getIdToken();
+        return token ? { Authorization: `Bearer ${token}` } : {};
+      },
     }),
     [functionUrl, boardId],
   );

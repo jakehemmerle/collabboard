@@ -1,8 +1,9 @@
 import type { AppModule, ModuleContext } from '../../core/module-system.ts';
 import { EventBus } from '../../core/events.ts';
 import type { Camera, Vec2, ViewportApi } from './contracts.ts';
-import { INITIAL_CAMERA } from './contracts.ts';
+import { INITIAL_CAMERA, ZOOM_STEP } from './contracts.ts';
 import * as cam from './domain/camera.ts';
+import { computeFitCamera } from './domain/fit-content.ts';
 
 export const VIEWPORT_MODULE_ID = 'viewport';
 
@@ -44,6 +45,24 @@ export const viewportModule: AppModule<ViewportApi> = {
 
       worldToScreen(world: Vec2) {
         return cam.worldToScreen(camera, world);
+      },
+
+      zoomIn() {
+        const center: Vec2 = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+        camera = cam.zoomAt(camera, center, ZOOM_STEP);
+        viewportEvents.emit('cameraChanged', camera);
+      },
+
+      zoomOut() {
+        const center: Vec2 = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+        camera = cam.zoomAt(camera, center, 1 / ZOOM_STEP);
+        viewportEvents.emit('cameraChanged', camera);
+      },
+
+      fitContent(objects, viewportWidth, viewportHeight) {
+        const fitted = computeFitCamera(objects, viewportWidth, viewportHeight);
+        camera = { ...fitted, scale: cam.clampScale(fitted.scale) };
+        viewportEvents.emit('cameraChanged', camera);
       },
     };
 

@@ -3,6 +3,7 @@ import { Group, Rect, Text } from 'react-konva';
 import type Konva from 'konva';
 import type { StickyNote } from '../contracts.ts';
 import { STICKY_COLORS } from '../contracts.ts';
+import { StickyReactions } from './StickyReactions.tsx';
 
 interface StickyNoteShapeProps {
   obj: StickyNote;
@@ -11,6 +12,8 @@ interface StickyNoteShapeProps {
   onDragMove?: (x: number, y: number) => void;
   onDragEnd: (x: number, y: number) => void;
   onDblClick: () => void;
+  onToggleReaction?: (emoji: string) => void;
+  currentUserId?: string;
 }
 
 export const StickyNoteShape = React.memo(function StickyNoteShape({
@@ -20,6 +23,8 @@ export const StickyNoteShape = React.memo(function StickyNoteShape({
   onDragMove,
   onDragEnd,
   onDblClick,
+  onToggleReaction,
+  currentUserId,
 }: StickyNoteShapeProps) {
   const fill = STICKY_COLORS[obj.color] ?? STICKY_COLORS.yellow;
 
@@ -87,6 +92,16 @@ export const StickyNoteShape = React.memo(function StickyNoteShape({
         wrap="word"
         listening={false}
       />
+
+      {onToggleReaction && (
+        <StickyReactions
+          reactions={obj.reactions ?? {}}
+          currentUserId={currentUserId ?? 'local'}
+          stickyWidth={obj.width}
+          stickyHeight={obj.height}
+          onToggleReaction={onToggleReaction}
+        />
+      )}
     </Group>
   );
 });

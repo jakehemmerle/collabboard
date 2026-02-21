@@ -8,6 +8,7 @@ import type { BoardAccessApi } from '../../modules/board-access/contracts.ts';
 import { useAuth } from '../../modules/auth/ui/useAuth.ts';
 import { useViewport } from '../../modules/viewport/ui/useViewport.ts';
 import { BackgroundGrid } from '../../modules/viewport/ui/BackgroundGrid.tsx';
+import { ZoomControls } from '../../modules/viewport/ui/ZoomControls.tsx';
 import { useObjects } from '../../modules/objects/ui/useObjects.ts';
 import { StickyNoteShape } from '../../modules/objects/ui/StickyNoteShape.tsx';
 import { RectangleShape } from '../../modules/objects/ui/RectangleShape.tsx';
@@ -36,6 +37,14 @@ import { PresenceRoster } from '../../modules/presence/ui/PresenceRoster.tsx';
 import { AiChatPanel } from '../../modules/ai-agent/ui/AiChatPanel.tsx';
 import { subscribeToChatMessages, persistChatMessages } from '../../modules/ai-agent/infrastructure/chat-sync.ts';
 import type { UIMessage } from 'ai';
+import { ShortcutHelp } from '../../shared/ui/ShortcutHelp.tsx';
+import { ToastContainer } from '../../shared/ui/ToastContainer.tsx';
+import { SelectionBar } from '../../modules/objects/ui/SelectionBar.tsx';
+import { SnapGuides } from '../../modules/objects/ui/SnapGuides.tsx';
+import { computeSnapGuides } from '../../modules/objects/domain/snap-guides.ts';
+import type { SnapGuide } from '../../modules/objects/domain/snap-guides.ts';
+import { alignLeft, alignRight, alignCenterH, alignTop, alignBottom, alignCenterV, distributeH, distributeV } from '../../modules/objects/domain/alignment.ts';
+import { Minimap } from '../../modules/viewport/ui/Minimap.tsx';
 import type Konva from 'konva';
 
 type BoardState =
@@ -114,7 +123,7 @@ export function BoardPage() {
 
 function BoardCanvas({ boardId, width, height }: { boardId: string; width: number; height: number }) {
   const { user } = useAuth();
-  const { camera, stageProps, stageRef, resetView } = useViewport();
+  const { camera, stageProps, stageRef, resetView, zoomIn, zoomOut, fitContent } = useViewport();
   const {
     objects,
     selectedIds,
@@ -139,6 +148,9 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
     createConnector,
     createFrame,
     updateFrameChildren,
+    undo,
+    redo,
+    toggleReaction,
   } = useObjects();
 
   // Viewport culling: compute visible objects for rendering
@@ -154,6 +166,7 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
   const [editingId, setEditingId] = useState<string | null>(null);
   const [sessionReady, setSessionReady] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [showShortcutHelp, setShowShortcutHelp] = useState(false);
   const presenceRef = useRef<PresenceApi | null>(null);
 
   // AI chat: load persisted messages and subscribe to updates
@@ -180,6 +193,9 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
   const [rubberBand, setRubberBand] = useState<{ startX: number; startY: number; endX: number; endY: number } | null>(null);
   const isRubberBanding = useRef(false);
 
+  // Snap guides state: computed during drag, cleared on drag end
+  const [snapGuides, setSnapGuides] = useState<SnapGuide[]>([]);
+
   // Throttled drag-move: buffer latest position per objectId, flush every 100ms
   const dragBufferRef = useRef<Map<string, { x: number; y: number }>>(new Map());
   useEffect(() => {
@@ -196,7 +212,16 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
 
   const handleDragMove = useCallback((objectId: string, x: number, y: number) => {
     dragBufferRef.current.set(objectId, { x, y });
-  }, []);
+
+    // Compute snap guides during drag
+    const draggingObj = objects.find((o) => o.id === objectId);
+    if (draggingObj) {
+      const bounds = { x, y, width: draggingObj.width, height: draggingObj.height };
+      const others = objects.filter((o) => o.id !== objectId && !selectedIds.includes(o.id));
+      const result = computeSnapGuides(bounds, others);
+      setSnapGuides(result.guides);
+    }
+  }, [objects, selectedIds]);
 
   // Board session lifecycle: enter on mount, leave on unmount
   useEffect(() => {
@@ -280,6 +305,9 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
       }
       deselectAll();
     },
+    onUndo: undo,
+    onRedo: redo,
+    onShowHelp: () => setShowShortcutHelp(true),
     isEditing: editingId !== null,
   });
 
@@ -419,14 +447,31 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
   // Recompute frame children after frame drag ends
   function handleFrameDragEnd(frameId: string, x: number, y: number) {
     moveObject(frameId, x, y);
+    setSnapGuides([]);
     recomputeAllFrameChildren();
   }
 
   // Regular object drag end: move then recompute frame children
   function handleObjectDragEnd(objectId: string, x: number, y: number) {
     moveObject(objectId, x, y);
+    setSnapGuides([]);
     recomputeAllFrameChildren();
   }
+
+  // Alignment handlers for SelectionBar
+  function applyAlignment(updates: Array<{ id: string; x: number; y: number }>) {
+    for (const u of updates) {
+      moveObject(u.id, u.x, u.y);
+    }
+  }
+  const handleAlignLeft = () => applyAlignment(alignLeft(selectedObjs));
+  const handleAlignRight = () => applyAlignment(alignRight(selectedObjs));
+  const handleAlignCenterH = () => applyAlignment(alignCenterH(selectedObjs));
+  const handleAlignTop = () => applyAlignment(alignTop(selectedObjs));
+  const handleAlignBottom = () => applyAlignment(alignBottom(selectedObjs));
+  const handleAlignCenterV = () => applyAlignment(alignCenterV(selectedObjs));
+  const handleDistributeH = () => applyAlignment(distributeH(selectedObjs));
+  const handleDistributeV = () => applyAlignment(distributeV(selectedObjs));
 
   const handleTextSave = useCallback(
     (text: string) => {
@@ -445,6 +490,19 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }, []);
+
+  // Minimap navigate: center the viewport on the clicked world position
+  const handleMinimapNavigate = useCallback((worldX: number, worldY: number) => {
+    const vp = getModuleApi<ViewportApi>(VIEWPORT_MODULE_ID);
+    const cam = vp.getCamera();
+    const newX = -worldX * cam.scale + width / 2;
+    const newY = -worldY * cam.scale + height / 2;
+    vp.setCamera({ x: newX, y: newY, scale: cam.scale });
+    const stage = stageRef.current;
+    if (stage) {
+      stage.position({ x: newX, y: newY });
+    }
+  }, [width, height, stageRef]);
 
   // Publish cursor position on mouse move (world coordinates)
   const handleMouseMove = useCallback(
@@ -466,6 +524,23 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
     },
     [],
   );
+
+  // Double-click on empty canvas: create a sticky note at that position
+  function handleStageDblClick(e: Konva.KonvaEventObject<MouseEvent>) {
+    if (e.target !== e.target.getStage()) return;
+    if (connectorMode) return;
+    const stage = e.target.getStage();
+    if (!stage) return;
+    const pointer = stage.getPointerPosition();
+    if (!pointer) return;
+    const vp = getModuleApi<ViewportApi>(VIEWPORT_MODULE_ID);
+    const world = vp.screenToWorld({ x: pointer.x, y: pointer.y });
+    const result = createSticky(world.x - 100, world.y - 75);
+    if (result.ok && result.objectId) {
+      selectObject(result.objectId);
+      setEditingId(result.objectId);
+    }
+  }
 
   // Stage click: deselect or start rubber-band
   function handleStageMouseDown(e: Konva.KonvaEventObject<MouseEvent>) {
@@ -515,6 +590,7 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
         onMouseDown={handleStageMouseDown}
         onMouseUp={handleStageMouseUp}
         onMouseMove={handleMouseMove}
+        onDblClick={handleStageDblClick}
       >
         <BackgroundGrid camera={camera} width={width} height={height} />
         <Layer>
@@ -564,6 +640,8 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
                   onDragMove={(x, y) => handleDragMove(obj.id, x, y)}
                   onDragEnd={(x, y) => handleObjectDragEnd(obj.id, x, y)}
                   onDblClick={() => setEditingId(obj.id)}
+                  onToggleReaction={(emoji) => toggleReaction(obj.id, emoji)}
+                  currentUserId={user?.uid ?? 'local'}
                 />
               );
             }
@@ -641,6 +719,7 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
               onRotateEnd={handleObjectRotate}
             />
           )}
+          <SnapGuides guides={snapGuides} />
         </Layer>
         <CursorLayer viewportBounds={viewportBounds} />
       </Stage>
@@ -700,22 +779,21 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
         {copied ? 'Link Copied!' : 'Share'}
       </button>
 
-      <button
-        onClick={resetView}
-        style={{
-          position: 'absolute',
-          bottom: 16,
-          right: 16,
-          padding: '8px 16px',
-          background: '#fff',
-          border: '1px solid #ccc',
-          borderRadius: 4,
-          cursor: 'pointer',
-          fontSize: 14,
-        }}
-      >
-        Reset View
-      </button>
+      <ZoomControls
+        camera={camera}
+        onZoomIn={zoomIn}
+        onZoomOut={zoomOut}
+        onResetView={resetView}
+        onFitContent={() => fitContent(objects, width, height)}
+      />
+
+      <Minimap
+        objects={objects}
+        camera={camera}
+        viewportWidth={width}
+        viewportHeight={height}
+        onNavigate={handleMinimapNavigate}
+      />
 
       {connectorMode && (
         <div
@@ -745,11 +823,34 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
         </div>
       )}
 
+      <SelectionBar
+        selectedCount={selectedIds.length}
+        onAlignLeft={handleAlignLeft}
+        onAlignCenterH={handleAlignCenterH}
+        onAlignRight={handleAlignRight}
+        onAlignTop={handleAlignTop}
+        onAlignCenterV={handleAlignCenterV}
+        onAlignBottom={handleAlignBottom}
+        onDistributeH={handleDistributeH}
+        onDistributeV={handleDistributeV}
+      />
+
+      <Minimap
+        objects={objects}
+        camera={camera}
+        viewportWidth={width}
+        viewportHeight={height}
+        onNavigate={handleMinimapNavigate}
+      />
+
       <AiChatPanel
         boardId={boardId}
         initialMessages={aiInitialMessages}
         onNewMessages={handleAiNewMessages}
       />
+
+      <ShortcutHelp open={showShortcutHelp} onClose={() => setShowShortcutHelp(false)} />
+      <ToastContainer />
     </div>
   );
 }

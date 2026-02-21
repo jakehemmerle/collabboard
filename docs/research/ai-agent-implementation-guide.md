@@ -88,7 +88,7 @@ import { streamText } from 'ai';
 import { anthropic } from '@ai-sdk/anthropic';
 
 const result = streamText({
-  model: anthropic('claude-sonnet-4-20250514'),
+  model: anthropic('claude-sonnet-4-6'),
   system: 'You are a collaborative whiteboard assistant.',
   messages,          // ModelMessage[] or UIMessage[] (auto-converted)
   tools,             // Record<string, Tool>
@@ -299,7 +299,7 @@ Each iteration = 1 "step". A step includes one LLM call + any resulting tool exe
 
 ```typescript
 const result = streamText({
-  model: anthropic('claude-sonnet-4-20250514'),
+  model: anthropic('claude-sonnet-4-6'),
   messages,
   tools,
   maxSteps: 10,  // Up to 10 LLM round-trips
@@ -312,7 +312,7 @@ const result = streamText({
 import { streamText, stepCountIs } from 'ai';
 
 const result = streamText({
-  model: anthropic('claude-sonnet-4-20250514'),
+  model: anthropic('claude-sonnet-4-6'),
   messages,
   tools,
   stopWhen: stepCountIs(10),  // Equivalent to maxSteps: 10
@@ -354,7 +354,7 @@ For Express-style `req/res` (Firebase Cloud Functions):
 import { streamText } from 'ai';
 
 const result = streamText({
-  model: anthropic('claude-sonnet-4-20250514'),
+  model: anthropic('claude-sonnet-4-6'),
   system: systemPrompt,
   messages,
   tools,
@@ -376,7 +376,7 @@ pipeUIMessageStreamToResponse({
   stream: createUIMessageStream({
     execute: async ({ writer }) => {
       const result = streamText({
-        model: anthropic('claude-sonnet-4-20250514'),
+        model: anthropic('claude-sonnet-4-6'),
         messages,
         tools,
         maxSteps: 10,
@@ -563,7 +563,7 @@ const { streamText } = wrapAISDK(ai);
 
 // Now all streamText calls are automatically traced
 const result = streamText({
-  model: anthropic('claude-sonnet-4-20250514'),
+  model: anthropic('claude-sonnet-4-6'),
   messages,
   tools,
   maxSteps: 10,
@@ -654,7 +654,7 @@ try {
 import { createLangSmithProviderOptions } from 'langsmith/experimental/vercel';
 
 const result = streamText({
-  model: anthropic('claude-sonnet-4-20250514'),
+  model: anthropic('claude-sonnet-4-6'),
   messages,
   tools,
   providerOptions: {
@@ -849,19 +849,19 @@ const anthropic = createAnthropic({
 ### Model Selection
 
 ```typescript
-const model = anthropic('claude-sonnet-4-20250514');
+const model = anthropic('claude-sonnet-4-6');
 // Also: anthropic.languageModel('...'), anthropic.chat('...')
 ```
 
 ### Recommended Model for CollabBoard
 
-`claude-sonnet-4-20250514` — best balance of cost, speed, and tool-calling quality.
+`claude-sonnet-4-6` — best balance of cost, speed, and tool-calling quality.
 
 ### Anthropic-Specific Options
 
 ```typescript
 streamText({
-  model: anthropic('claude-sonnet-4-20250514'),
+  model: anthropic('claude-sonnet-4-6'),
   providerOptions: {
     anthropic: {
       disableParallelToolUse: true,  // Force sequential tool calls
@@ -1085,7 +1085,7 @@ export const aiChat = onRequest(
 
     try {
       const result = streamText({
-        model: anthropic('claude-sonnet-4-20250514'),
+        model: anthropic('claude-sonnet-4-6'),
         system: systemPrompt,
         messages: modelMessages,
         tools,

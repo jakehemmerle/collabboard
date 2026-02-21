@@ -88,7 +88,6 @@ export function createFirestoreSync(): FirestoreSyncHandle {
       isFirstSnapshot = true;
       const db = getFirebaseDb();
       const colRef = collection(db, 'boards', boardId, 'objects');
-
       unsub = onSnapshot(
         colRef,
         (snapshot) => {

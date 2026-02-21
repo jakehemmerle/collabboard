@@ -1,0 +1,971 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CollabBoard AI Architecture Atlas</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0f1720;
+      --panel: #172433;
+      --panel-2: #1d2d40;
+      --text: #e7edf5;
+      --muted: #9fb1c4;
+      --border: #31495f;
+      --accent: #1ea896;
+      --accent-2: #f4a261;
+      --warn: #ef476f;
+      --mono: "IBM Plex Mono", "Courier New", monospace;
+      --sans: "Space Grotesk", "Avenir Next", "Segoe UI", sans-serif;
+      --ok-bg: rgba(30, 168, 150, 0.2);
+      --ok: #7df9e2;
+      --read-bg: rgba(86, 180, 233, 0.2);
+      --read: #92d7ff;
+      --write-bg: rgba(244, 162, 97, 0.2);
+      --write: #ffd0a8;
+      --delete-bg: rgba(239, 71, 111, 0.2);
+      --delete: #ff9db7;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background:
+        radial-gradient(1200px 500px at 10% -20%, rgba(30, 168, 150, 0.14), transparent 60%),
+        radial-gradient(1000px 500px at 90% -30%, rgba(244, 162, 97, 0.16), transparent 60%),
+        var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      line-height: 1.5;
+    }
+
+    .container {
+      max-width: 1320px;
+      margin: 0 auto;
+      padding: 28px 20px 64px;
+    }
+
+    .hero {
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: linear-gradient(165deg, rgba(29, 45, 64, 0.95), rgba(23, 36, 51, 0.95));
+      padding: 24px;
+      box-shadow: 0 18px 60px rgba(0, 0, 0, 0.25);
+      margin-bottom: 20px;
+    }
+
+    .hero h1 {
+      margin: 0 0 8px;
+      font-size: clamp(1.5rem, 2.6vw, 2.3rem);
+      line-height: 1.15;
+      letter-spacing: 0.02em;
+    }
+
+    .hero p {
+      margin: 0;
+      color: var(--muted);
+      max-width: 920px;
+    }
+
+    .stats {
+      margin-top: 16px;
+      display: grid;
+      gap: 10px;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    }
+
+    .stat {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: rgba(20, 33, 48, 0.75);
+      padding: 10px 12px;
+    }
+
+    .stat .k {
+      display: block;
+      font-family: var(--mono);
+      color: var(--accent-2);
+      font-size: 0.78rem;
+      margin-bottom: 3px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .stat .v {
+      font-size: 1.08rem;
+      font-weight: 600;
+    }
+
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px;
+      margin-bottom: 18px;
+      background: rgba(15, 23, 32, 0.82);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .nav a {
+      text-decoration: none;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 0.84rem;
+      background: rgba(23, 36, 51, 0.9);
+      transition: border-color 120ms ease, transform 120ms ease;
+    }
+
+    .nav a:hover {
+      border-color: var(--accent);
+      transform: translateY(-1px);
+    }
+
+    .card {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: rgba(23, 36, 51, 0.92);
+      padding: 16px;
+      margin-bottom: 16px;
+      overflow: hidden;
+    }
+
+    .card h2 {
+      margin: 0 0 8px;
+      font-size: 1.15rem;
+      letter-spacing: 0.02em;
+    }
+
+    .card p {
+      margin: 0 0 12px;
+      color: var(--muted);
+      font-size: 0.94rem;
+    }
+
+    .legend {
+      margin: 0 0 12px;
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      color: var(--muted);
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .dot.a { background: var(--accent); }
+    .dot.b { background: var(--accent-2); }
+    .dot.c { background: var(--warn); }
+
+    .mermaid {
+      padding: 10px;
+      border-radius: 12px;
+      background: linear-gradient(165deg, rgba(20, 31, 44, 0.95), rgba(18, 28, 40, 0.95));
+      border: 1px solid rgba(64, 92, 115, 0.55);
+      overflow: auto;
+      min-height: 110px;
+    }
+
+    .matrix-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: rgba(17, 28, 40, 0.92);
+    }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      min-width: 940px;
+      font-size: 0.86rem;
+    }
+
+    th,
+    td {
+      border-bottom: 1px solid rgba(49, 73, 95, 0.8);
+      border-right: 1px solid rgba(49, 73, 95, 0.55);
+      padding: 10px 10px;
+      text-align: left;
+      vertical-align: middle;
+    }
+
+    th {
+      font-family: var(--mono);
+      font-size: 0.76rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: #d4dfeb;
+      background: rgba(23, 36, 51, 0.94);
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    tr:hover td {
+      background: rgba(30, 52, 73, 0.4);
+    }
+
+    td.tool {
+      font-family: var(--mono);
+      color: #d9e6f5;
+      background: rgba(21, 33, 48, 0.82);
+      width: 220px;
+    }
+
+    .tag {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      border: 1px solid transparent;
+    }
+
+    .tag.read { background: var(--read-bg); color: var(--read); border-color: rgba(146, 215, 255, 0.42); }
+    .tag.write { background: var(--write-bg); color: var(--write); border-color: rgba(255, 208, 168, 0.42); }
+    .tag.delete { background: var(--delete-bg); color: var(--delete); border-color: rgba(255, 157, 183, 0.42); }
+    .tag.ok { background: var(--ok-bg); color: var(--ok); border-color: rgba(125, 249, 226, 0.42); }
+
+    .yes::before { content: "Y"; color: var(--ok); font-weight: 700; }
+    .no::before { content: "-"; color: var(--muted); }
+
+    .paths {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 10px;
+    }
+
+    .path {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      background: rgba(20, 33, 48, 0.9);
+    }
+
+    .path h3 {
+      margin: 0 0 8px;
+      font-size: 0.96rem;
+      color: #f8c99a;
+    }
+
+    .path code {
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      color: #d7e5f7;
+      white-space: pre-wrap;
+    }
+
+    .sources {
+      margin-top: 10px;
+      border-top: 1px dashed rgba(76, 108, 132, 0.65);
+      padding-top: 10px;
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    .sources code {
+      font-family: var(--mono);
+      color: #d9e6f5;
+    }
+
+    .warn-banner {
+      border: 1px solid rgba(244, 162, 97, 0.6);
+      background: rgba(244, 162, 97, 0.12);
+      color: #ffd4ae;
+      border-radius: 10px;
+      padding: 10px 12px;
+      margin-bottom: 16px;
+      font-size: 0.86rem;
+    }
+
+    @media (max-width: 760px) {
+      .container { padding: 18px 12px 44px; }
+      .hero { padding: 16px; }
+      .card { padding: 12px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <section class="hero">
+      <h1>CollabBoard AI Architecture Atlas</h1>
+      <p>A source-grounded architecture walkthrough of the product and the in-browser AI system. This atlas focuses on runtime function calls across primary objects/modules and how AI tool execution mutates board state for every connected user.</p>
+      <div class="stats">
+        <div class="stat"><span class="k">Client Modules</span><span class="v">9 registered modules</span></div>
+        <div class="stat"><span class="k">AI Entry Path</span><span class="v">AiChatPanel -> useChat -> aiChat</span></div>
+        <div class="stat"><span class="k">Server Tools</span><span class="v">10 callable tools</span></div>
+        <div class="stat"><span class="k">Realtime Buses</span><span class="v">Firestore + Realtime DB</span></div>
+        <div class="stat"><span class="k">Sync Mechanism</span><span class="v">onSnapshot + EventBus</span></div>
+      </div>
+    </section>
+
+    <nav class="nav">
+      <a href="#product-map">Product Map</a>
+      <a href="#ai-sequence">AI Sequence</a>
+      <a href="#class-map">Class/Object Map</a>
+      <a href="#call-graph">Function Call Graph</a>
+      <a href="#chat-loop">Chat Persistence Loop</a>
+      <a href="#lifecycle">Mutation Lifecycle</a>
+      <a href="#data-er">Data ER</a>
+      <a href="#tool-matrix">Tool Matrix</a>
+      <a href="#call-paths">Primary Call Paths</a>
+    </nav>
+
+    <div id="mermaid-status" class="warn-banner" hidden></div>
+
+    <section id="product-map" class="card">
+      <h2>1) Product Module Topology</h2>
+      <p>High-level architecture from <code>composition-root.ts</code> and <code>BoardPage.tsx</code>. This shows where the AI path sits inside the broader collaboration stack.</p>
+      <div class="legend">
+        <span class="chip"><span class="dot a"></span>Browser modules</span>
+        <span class="chip"><span class="dot b"></span>Firebase services</span>
+        <span class="chip"><span class="dot c"></span>External AI/observability</span>
+      </div>
+      <pre class="mermaid">
+flowchart LR
+  subgraph Browser["Browser App (React + Konva)"]
+    CR["initApp() + composition-root.ts"]
+    MR["module-registry.ts"]
+    BP["BoardPage.tsx"]
+    AIUI["AiChatPanel.tsx"]
+    OBJ["objectsModule"]
+    SYN["syncModule"]
+    PRE["presenceModule"]
+  end
+
+  subgraph Firebase["Firebase Platform"]
+    FS[("Firestore&lt;br/&gt;boards/{board}/objects&lt;br/&gt;boards/{board}/ai-messages")]
+    RT[("Realtime DB&lt;br/&gt;presence")]
+    AUTH["Firebase Auth"]
+    FN["aiChat Cloud Function"]
+  end
+
+  subgraph External["External AI + Tracing"]
+    AN["Anthropic Claude Sonnet 4"]
+    LS["LangSmith (wrapAISDK)"]
+  end
+
+  CR --> MR
+  MR --> OBJ
+  MR --> SYN
+  MR --> PRE
+  BP --> OBJ
+  BP --> SYN
+  BP --> PRE
+  AUTH --> BP
+  BP --> AIUI
+  AIUI -->|"useChat + DefaultChatTransport"| FN
+  FN -->|"streamText(...)"| AN
+  FN -->|"trace spans"| LS
+  FN &lt;--&gt;|"tool execute read/write"| FS
+  SYN &lt;--&gt;|"onSnapshot + writeBatch"| FS
+  PRE &lt;--&gt;|"cursor updates"| RT
+      </pre>
+    </section>
+
+    <section id="ai-sequence" class="card">
+      <h2>2) AI Request Sequence (End-to-End)</h2>
+      <p>Runtime sequence for one prompt from user input to board mutation propagation.</p>
+      <pre class="mermaid">
+sequenceDiagram
+    autonumber
+    actor U as User
+    participant Panel as AiChatPanel
+    participant Hook as useChat + transport
+    participant Page as BoardPage
+    participant Fn as aiChat(req,res)
+    participant LLM as Claude Sonnet 4
+    participant Tools as createToolDefinitions()
+    participant ObjFS as Firestore objects
+    participant MsgFS as Firestore ai-messages
+    participant Sync as syncModule + boardSession
+    participant Obj as objectsModule + store
+    participant Canvas as Konva render
+
+    U->>Panel: Submit command text
+    Panel->>Hook: sendMessage({ text })
+    Hook->>Fn: POST { messages, boardId }
+    Fn->>Fn: Validate method/body/secrets
+    Fn->>Tools: createToolDefinitions(db, boardId)
+    Fn->>LLM: streamText(system, modelMessages, tools)
+
+    loop up to 10 tool steps
+      LLM->>Tools: execute(toolName, input)
+      Tools->>ObjFS: set/update/delete/get object docs
+      ObjFS-->>LLM: tool output
+    end
+
+    LLM-->>Hook: streamed UIMessage parts
+    Hook-->>Panel: messages/status updates
+    Panel->>Page: onNewMessages(messages)
+    Page->>MsgFS: persistChatMessages()
+
+    ObjFS-->>Sync: onSnapshot(docChanges)
+    Sync-->>Obj: applyRemote(event)
+    Obj-->>Canvas: objectsEvents.emit(objectsChanged)
+    Canvas-->>U: board rerenders with AI results
+
+    MsgFS-->>Page: subscribeToChatMessages()
+    Page-->>Panel: initialMessages hydration
+
+    ObjFS-->>Sync: initial snapshot (full board)
+    Sync-->>Obj: hydrateFromSnapshot(objects)
+    Obj-->>Canvas: initial board render
+
+    ObjFS-->>Sync: subsequent docChanges
+    Sync-->>Obj: applyRemote(event)
+    Obj-->>Canvas: incremental rerender
+      </pre>
+    </section>
+
+    <section id="class-map" class="card">
+      <h2>3) Primary Objects / Classes and Function Boundaries</h2>
+      <p>Class-style view of the key runtime objects and their method responsibilities.</p>
+      <pre class="mermaid">
+classDiagram
+  class AiAgentModule {
+    +init(ctx): AiAgentApi
+    +dispose(): Promise~void~
+    +getConfig(): AiAgentConfig
+  }
+
+  class AiChatPanel {
+    +handleSubmit(e)
+    +sendMessageText()
+    +setInitialMessages()
+    +handleNewMessages()
+    +clearError()
+  }
+
+  class AiMessageBubble {
+    +render(message.parts)
+    +renderDynamicToolState()
+  }
+
+  class BoardPage {
+    +subscribeToChatMessages(boardId)
+    +handleAiNewMessages(messages)
+    +persistChatMessages(boardId, messages)
+  }
+
+  class AiChatFunction {
+    +aiChatHandler()
+    +convertToModelMessages(messages)
+    +streamText(config)
+    +pipeUIMessageStream()
+    +consumeStream()
+  }
+
+  class ToolDefinitions {
+    +createStickyNoteExecute()
+    +createShapeExecute()
+    +createFrameExecute()
+    +createConnectorExecute()
+    +moveObjectExecute()
+    +resizeObjectExecute()
+    +updateTextExecute()
+    +changeColorExecute()
+    +deleteObjectExecute()
+    +getBoardStateExecute()
+  }
+
+  class SyncModule {
+    +connect(boardId, actorId)
+    +publish(objectId, data)
+    +onRemoteChange(cb)
+  }
+
+  class ObjectsModule {
+    +applyLocal(intent)
+    +applyRemote(event)
+    +hydrateFromSnapshot(objects)
+    +observeObjects(cb)
+  }
+
+  class FirestoreSync {
+    +subscribe(boardId, onChange)
+    +write(boardId, objectId, data)
+    +flushWrites(boardId)
+  }
+
+  class FirestoreData {
+    +setDoc()
+    +updateDoc()
+    +deleteDoc()
+    +getDoc()
+    +getCollection()
+    +onSnapshot()
+  }
+
+  AiChatPanel --> AiAgentModule : getModuleApi(...).getConfig()
+  AiChatPanel --> AiMessageBubble : render messages
+  BoardPage --> AiChatPanel : props boardId/initialMessages
+  BoardPage --> SyncModule : board session path
+  BoardPage --> ObjectsModule : render + edits
+  AiChatPanel --> AiChatFunction : POST via useChat transport
+  AiChatFunction --> ToolDefinitions : createToolDefinitions()
+  ToolDefinitions --> FirestoreData : direct Firestore read/write
+  SyncModule --> FirestoreSync : wraps createFirestoreSync()
+  FirestoreSync --> FirestoreData : onSnapshot + writeBatch
+  SyncModule --> ObjectsModule : remote events
+  ObjectsModule --> BoardPage : objectsChanged event stream
+      </pre>
+    </section>
+
+    <section id="call-graph" class="card">
+      <h2>4) Function-Level Call Graph (Prompt -> Object Mutation)</h2>
+      <p>Detailed call graph for primary function invocations across browser, function runtime, and realtime sync.</p>
+      <pre class="mermaid">
+flowchart TB
+  subgraph Browser["Browser Runtime"]
+    A1["AiChatPanel.handleSubmit()"]
+    A2["sendMessage({text})"]
+    A3["DefaultChatTransport(api, body)"]
+    A4["BoardPage.handleAiNewMessages()"]
+    A5["persistChatMessages()"]
+    A6["createFirestoreSync.subscribe() callback"]
+    A7["syncEvents.emit('remoteChange')"]
+    A8["boardSession first-batch handler"]
+    A9["objectsApi.hydrateFromSnapshot(objects)"]
+    A10["objectsApi.applyRemote(event)"]
+    A11["object-store.setObject/removeObject"]
+    A12["objectsEvents.emit('objectsChanged')"]
+    A13["useObjects(useSyncExternalStore)"]
+    A14["BoardPage/Konva rerender"]
+  end
+
+  subgraph Function["Cloud Function Runtime"]
+    F1["aiChat(req,res)"]
+    F2["convertToModelMessages(messages)"]
+    F3["createToolDefinitions(db, boardId)"]
+    F4["streamText({... stopWhen: stepCountIs(10)})"]
+    F5["tool.execute(input)"]
+    F6["result.pipeUIMessageStreamToResponse(res)"]
+    F7["result.consumeStream()"]
+  end
+
+  subgraph Data["Data Plane"]
+    D1[("Firestore boards/{board}/objects")]
+    D2[("Firestore boards/{board}/ai-messages")]
+  end
+
+  A1 --> A2 --> A3 --> F1
+  F1 --> F2 --> F4
+  F1 --> F3 --> F5
+  F5 --> D1
+  F4 --> F6
+  F4 --> F7
+  A2 --> A4 --> A5 --> D2
+  D1 --> A6 --> A7
+  A7 --> A8 --> A9 --> A12
+  A7 --> A10 --> A11 --> A12 --> A13 --> A14
+      </pre>
+    </section>
+
+    <section id="chat-loop" class="card">
+      <h2>5) Chat Persistence Loop</h2>
+      <p>How board-scoped AI chat history is read and written around the live streaming session.</p>
+      <pre class="mermaid">
+flowchart LR
+  C1["BoardPage useEffect"] -->|"subscribeToChatMessages(boardId)"| C2[("Firestore ai-messages")]
+  C2 -->|"onSnapshot(orderBy createdAt)"| C3["setAiInitialMessages(prev === undefined ? msgs : prev)"]
+  C3 -->|"initialMessages prop"| C4["AiChatPanel useChat({ messages: initialMessages })"]
+  C4 -->|"messages length increased"| C5["onNewMessages(messages)"]
+  C5 --> C6["BoardPage.handleAiNewMessages"]
+  C6 -->|"persistChatMessages(boardId, messages)"| C2
+      </pre>
+    </section>
+
+    <section id="lifecycle" class="card">
+      <h2>6) AI Mutation Lifecycle State Machine</h2>
+      <p>Lifecycle states in the browser as one AI request moves from submission to rendered board state.</p>
+      <pre class="mermaid">
+stateDiagram-v2
+  [*] --> ChatIdle
+  ChatIdle --> ChatOpen: AI button clicked
+  ChatOpen --> Submitted: handleSubmit() + sendMessage()
+  Submitted --> Streaming: useChat status=submitted/streaming
+  Streaming --> ToolExecuting: dynamic-tool part emitted
+  ToolExecuting --> FirestoreMutating: tool.execute() writes objects
+  FirestoreMutating --> SyncPropagating: onSnapshot -> remoteChange
+  SyncPropagating --> StoreUpdated: applyRemote() + setObject/removeObject
+  StoreUpdated --> CanvasUpdated: objectsChanged -> useObjects
+  CanvasUpdated --> ChatOpen
+
+  Streaming --> PersistingHistory: messages length increased
+  PersistingHistory --> ChatOpen: persistChatMessages complete
+
+  Streaming --> Error: function/network failure
+  Error --> ChatOpen: clearError()
+      </pre>
+    </section>
+
+    <section id="data-er" class="card">
+      <h2>7) Data Model ER View</h2>
+      <p>Storage model used by the AI system and board sync pipeline.</p>
+      <pre class="mermaid">
+erDiagram
+  BOARD ||--o{ BOARD_OBJECT : contains
+  BOARD ||--o{ AI_MESSAGE : stores
+
+  BOARD {
+    string id PK
+    string ownerId
+    number createdAt
+    number updatedAt
+  }
+
+  BOARD_OBJECT {
+    string id PK
+    string boardId FK
+    string type
+    number x
+    number y
+    number width
+    number height
+    number updatedAt
+  }
+
+  AI_MESSAGE {
+    string id PK
+    string boardId FK
+    string role
+    json parts
+    string content
+    number createdAt
+  }
+      </pre>
+    </section>
+
+    <section id="tool-matrix" class="card">
+      <h2>8) Operation Matrix (Server Tools + Client Persistence)</h2>
+      <p>Per-operation behavior across Cloud Function tools and client chat persistence, with read/write/delete semantics and object-type impact.</p>
+      <div class="matrix-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Tool</th>
+              <th>Runtime</th>
+              <th>Reads Objects</th>
+              <th>Creates Objects</th>
+              <th>Updates Objects</th>
+              <th>Deletes Objects</th>
+              <th>Writes Chat History</th>
+              <th>Primary Object Types</th>
+              <th>Data Operation</th>
+            </tr>
+          </thead>
+          <tbody id="tool-matrix-body"></tbody>
+        </table>
+      </div>
+      <div class="sources">
+        Derived from <code>firebase/functions/src/tools/tool-definitions.ts</code> and <code>apps/web/src/modules/ai-agent/infrastructure/chat-sync.ts</code>.
+      </div>
+    </section>
+
+    <section id="call-paths" class="card">
+      <h2>9) Primary Call Paths (Exact Function Chains)</h2>
+      <p>Concise function-path traces for the highest-impact behaviors.</p>
+      <div class="paths" id="call-path-grid"></div>
+      <div class="sources">
+        Key files: <code>apps/web/src/modules/ai-agent/ui/AiChatPanel.tsx</code>, <code>apps/web/src/app/pages/BoardPage.tsx</code>, <code>firebase/functions/src/ai-chat.ts</code>, <code>apps/web/src/modules/sync/infrastructure/firestore-sync.ts</code>, <code>apps/web/src/modules/objects/index.ts</code>.
+      </div>
+    </section>
+  </div>
+
+  <script type="module">
+    const statusEl = document.getElementById("mermaid-status");
+
+    try {
+      const { default: mermaid } = await import("https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs");
+
+      mermaid.initialize({
+        startOnLoad: false,
+        securityLevel: "loose",
+        theme: "base",
+        themeVariables: {
+          fontFamily: "Space Grotesk",
+          primaryColor: "#1d2d40",
+          primaryTextColor: "#ecf4fb",
+          primaryBorderColor: "#1ea896",
+          lineColor: "#8bb0ce",
+          secondaryColor: "#142133",
+          tertiaryColor: "#24384e",
+          noteBkgColor: "#2a4158",
+          noteTextColor: "#f6fbff",
+          edgeLabelBackground: "#132133",
+        },
+        flowchart: {
+          htmlLabels: true,
+          curve: "basis",
+        },
+        sequence: {
+          mirrorActors: false,
+        },
+      });
+
+      await mermaid.run({ querySelector: ".mermaid" });
+    } catch (err) {
+      if (statusEl) {
+        statusEl.hidden = false;
+        statusEl.textContent = "Mermaid diagrams could not be loaded (CDN unavailable). Matrix and call-path tables still render below.";
+      }
+      console.warn("[ai-architecture-atlas] Mermaid failed to load:", err);
+    }
+  </script>
+
+  <script>
+    const matrixRows = [
+      {
+        tool: "createStickyNote",
+        runtime: '<span class="tag read">server</span>',
+        reads: false,
+        creates: true,
+        updates: false,
+        deletes: false,
+        writesChat: false,
+        types: "sticky",
+        op: '<span class="tag write">doc.set()</span>',
+      },
+      {
+        tool: "createShape",
+        runtime: '<span class="tag read">server</span>',
+        reads: false,
+        creates: true,
+        updates: false,
+        deletes: false,
+        writesChat: false,
+        types: "rectangle, circle",
+        op: '<span class="tag write">doc.set()</span>',
+      },
+      {
+        tool: "createFrame",
+        runtime: '<span class="tag read">server</span>',
+        reads: false,
+        creates: true,
+        updates: false,
+        deletes: false,
+        writesChat: false,
+        types: "frame",
+        op: '<span class="tag write">doc.set()</span>',
+      },
+      {
+        tool: "createConnector",
+        runtime: '<span class="tag read">server</span>',
+        reads: false,
+        creates: true,
+        updates: false,
+        deletes: false,
+        writesChat: false,
+        types: "connector",
+        op: '<span class="tag write">doc.set()</span>',
+      },
+      {
+        tool: "moveObject",
+        runtime: '<span class="tag read">server</span>',
+        reads: false,
+        creates: false,
+        updates: true,
+        deletes: false,
+        writesChat: false,
+        types: "all movable",
+        op: '<span class="tag write">doc.update()</span>',
+      },
+      {
+        tool: "resizeObject",
+        runtime: '<span class="tag read">server</span>',
+        reads: false,
+        creates: false,
+        updates: true,
+        deletes: false,
+        writesChat: false,
+        types: "all resizable",
+        op: '<span class="tag write">doc.update()</span>',
+      },
+      {
+        tool: "updateText",
+        runtime: '<span class="tag read">server</span>',
+        reads: true,
+        creates: false,
+        updates: true,
+        deletes: false,
+        writesChat: false,
+        types: "sticky, text, frame",
+        op: '<span class="tag read">doc.get()</span> <span class="tag write">doc.update()</span>',
+      },
+      {
+        tool: "changeColor",
+        runtime: '<span class="tag read">server</span>',
+        reads: true,
+        creates: false,
+        updates: true,
+        deletes: false,
+        writesChat: false,
+        types: "sticky, shape, line, connector, text, frame",
+        op: '<span class="tag read">doc.get()</span> <span class="tag write">doc.update()</span>',
+      },
+      {
+        tool: "deleteObject",
+        runtime: '<span class="tag read">server</span>',
+        reads: false,
+        creates: false,
+        updates: false,
+        deletes: true,
+        writesChat: false,
+        types: "all",
+        op: '<span class="tag delete">doc.delete()</span>',
+      },
+      {
+        tool: "getBoardState",
+        runtime: '<span class="tag read">server</span>',
+        reads: true,
+        creates: false,
+        updates: false,
+        deletes: false,
+        writesChat: false,
+        types: "all",
+        op: '<span class="tag read">collection.get()</span>',
+      },
+      {
+        tool: "persistChatMessages",
+        runtime: '<span class="tag write">client</span>',
+        reads: false,
+        creates: true,
+        updates: true,
+        deletes: false,
+        writesChat: true,
+        types: "ai-messages",
+        op: '<span class="tag write">setDoc(..., { merge: true })</span>',
+      },
+    ];
+
+    const tbody = document.getElementById("tool-matrix-body");
+
+    function yn(value) {
+      return `<span class="${value ? "yes" : "no"}"></span>`;
+    }
+
+    tbody.innerHTML = matrixRows.map((row) => {
+      const chatTag = row.writesChat
+        ? '<span class="tag ok">yes</span>'
+        : '<span class="tag">no</span>';
+      return `
+        <tr>
+          <td class="tool">${row.tool}</td>
+          <td>${row.runtime}</td>
+          <td>${yn(row.reads)}</td>
+          <td>${yn(row.creates)}</td>
+          <td>${yn(row.updates)}</td>
+          <td>${yn(row.deletes)}</td>
+          <td>${chatTag}</td>
+          <td>${row.types}</td>
+          <td>${row.op}</td>
+        </tr>
+      `;
+    }).join("");
+
+    const callPaths = [
+      {
+        title: "Prompt to LLM streaming",
+        chain: [
+          "AiChatPanel.handleSubmit()",
+          "-> sendMessage({ text })",
+          "-> DefaultChatTransport(api, { boardId })",
+          "-> aiChat(req,res)",
+          "-> streamText(...)",
+          "-> pipeUIMessageStreamToResponse(res)",
+        ].join("\\n"),
+      },
+      {
+        title: "Tool execution to object mutation",
+        chain: [
+          "streamText loop",
+          "-> tool.execute(input)",
+          "-> objectsRef.doc(id).set/update/delete/get",
+          "-> Firestore boards/{boardId}/objects",
+        ].join("\\n"),
+      },
+      {
+        title: "Remote mutation to canvas rerender",
+        chain: [
+          "onSnapshot(docChanges)",
+          "-> syncEvents.emit('remoteChange')",
+          "-> boardSession first batch: hydrateFromSnapshot(objects)",
+          "-> subsequent batches: applyRemote(event)",
+          "-> object-store.setObject/removeObject",
+          "-> objectsEvents.emit('objectsChanged')",
+          "-> useObjects(useSyncExternalStore)",
+          "-> BoardPage/Konva rerender",
+        ].join("\\n"),
+      },
+      {
+        title: "Chat history persistence loop",
+        chain: [
+          "AiChatPanel messages changed",
+          "-> onNewMessages(messages)",
+          "-> BoardPage.handleAiNewMessages",
+          "-> persistChatMessages(boardId, messages)",
+          "-> Firestore boards/{boardId}/ai-messages",
+          "-> subscribeToChatMessages(boardId)",
+          "-> initialMessages hydration",
+        ].join("\\n"),
+      },
+      {
+        title: "Local user object edit path (contrast)",
+        chain: [
+          "UI action -> useObjects.create*/move*/update*",
+          "-> objectsApi.applyLocal(intent)",
+          "-> handleIntent(intent, actorId)",
+          "-> object-store mutation",
+          "-> syncApi.publish(objectId,data)",
+          "-> Firestore writeBatch flush",
+        ].join("\\n"),
+      },
+      {
+        title: "aiChat bootstrap path",
+        chain: [
+          "aiChat(req,res)",
+          "-> validate POST + boardId + messages",
+          "-> createAnthropic({ apiKey })",
+          "-> createToolDefinitions(db, boardId)",
+          "-> convertToModelMessages(messages)",
+          "-> streamText({ tools, stopWhen: stepCountIs(10) })",
+          "-> consumeStream() + awaitPendingTraceBatches()",
+        ].join("\\n"),
+      },
+    ];
+
+    const grid = document.getElementById("call-path-grid");
+    grid.innerHTML = callPaths.map((path) => `
+      <article class="path">
+        <h3>${path.title}</h3>
+        <code>${path.chain}</code>
+      </article>
+    `).join("");
+  </script>
+</body>
+</html>

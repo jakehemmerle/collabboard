@@ -16,6 +16,9 @@ export interface ViewportApi {
   zoomAt(screen: Vec2, factor: number): void;
   screenToWorld(screen: Vec2): Vec2;
   worldToScreen(world: Vec2): Vec2;
+  zoomIn(): void;
+  zoomOut(): void;
+  fitContent(objects: Array<{x: number, y: number, width: number, height: number}>, viewportWidth: number, viewportHeight: number): void;
 }
 
 export const ZOOM_MIN = 0.1;

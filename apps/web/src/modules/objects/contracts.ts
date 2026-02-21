@@ -38,6 +38,7 @@ export interface StickyNote extends BoardObjectBase {
   type: 'sticky';
   text: string;
   color: StickyColor;
+  reactions?: Record<string, string[]>;  // emoji -> array of user UIDs
 }
 
 export interface RectangleObject extends BoardObjectBase {
@@ -107,7 +108,8 @@ export type ObjectIntent =
   | { kind: 'duplicate'; objectIds: string[]; offsetX?: number; offsetY?: number }
   | { kind: 'create-connector'; sourceId: string; targetId: string; style?: ConnectorStyle; stroke?: string }
   | { kind: 'create-frame'; x: number; y: number; title?: string; fill?: string }
-  | { kind: 'update-frame-children'; objectId: string; children: string[] };
+  | { kind: 'update-frame-children'; objectId: string; children: string[] }
+  | { kind: 'toggle-reaction'; objectId: string; emoji: string };
 
 export interface ApplyResult {
   ok: boolean;
@@ -135,5 +137,8 @@ export interface ObjectsApi {
   selectAll(): void;
   deselectAll(): void;
   getSnapshot(): ObjectsState;
+  undo(): void;
+  redo(): void;
   observeObjects(cb: (state: ObjectsState) => void): () => void;
+  toggleReaction(objectId: string, emoji: string): void;
 }

@@ -1,6 +1,7 @@
 import { onRequest } from 'firebase-functions/v2/https';
 import { defineSecret } from 'firebase-functions/params';
 import { initializeApp, getApps } from 'firebase-admin/app';
+import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
 import * as ai from 'ai';
 import { convertToModelMessages, stepCountIs } from 'ai';
@@ -39,10 +40,34 @@ export const aiChat = onRequest(
       return;
     }
 
+    // Authenticate: require a valid Firebase Auth ID token
+    const authHeader = req.headers.authorization;
+    if (!authHeader?.startsWith('Bearer ')) {
+      res.status(401).json({ error: 'Missing authentication token' });
+      return;
+    }
+    const idToken = authHeader.split('Bearer ')[1];
+    let uid: string;
+    try {
+      const decoded = await getAuth().verifyIdToken(idToken);
+      uid = decoded.uid;
+    } catch {
+      res.status(401).json({ error: 'Invalid authentication token' });
+      return;
+    }
+
+    console.log(`[aiChat] Authenticated user: ${uid}`);
     const { messages, boardId } = req.body;
 
     if (!boardId || !messages) {
       res.status(400).json({ error: 'Missing boardId or messages' });
+      return;
+    }
+
+    // Verify the board exists
+    const boardDoc = await db.doc(`boards/${boardId}`).get();
+    if (!boardDoc.exists) {
+      res.status(404).json({ error: 'Board not found' });
       return;
     }
 
@@ -60,7 +85,7 @@ export const aiChat = onRequest(
       const modelMessages = await convertToModelMessages(messages);
 
       const result = streamText({
-        model: anthropic('claude-sonnet-4-20250514'),
+        model: anthropic('claude-sonnet-4-6'),
         system: SYSTEM_PROMPT,
         messages: modelMessages,
         tools,

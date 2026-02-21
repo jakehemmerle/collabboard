@@ -220,7 +220,7 @@ Click into the trace for the SWOT analysis command (Test 7.7).
 In any trace on the LangSmith dashboard, check the metadata.
 
 **Pass criteria:**
-- The model used is visible (e.g., `claude-sonnet-4-20250514`)
+- The model used is visible (e.g., `claude-sonnet-4-6`)
 - Input and output token counts are recorded
 - Token usage is reasonable for the command type (single-step < 2k tokens, multi-step < 10k)
 

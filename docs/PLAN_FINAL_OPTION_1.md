@@ -412,7 +412,7 @@ The Cloud Function uses `cors: true` in its `onRequest` options to allow cross-o
       const { messages, boardId } = req.body;
       const tools = toolDefinitions(db, boardId);
       const result = streamText({
-        model: anthropic('claude-sonnet-4-20250514'),
+        model: anthropic('claude-sonnet-4-6'),
         system: systemPrompt,
         messages,
         tools,

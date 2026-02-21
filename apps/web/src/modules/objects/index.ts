@@ -7,6 +7,7 @@ import type { ObjectsApi, ObjectsState, ObjectIntent, BoardObject } from './cont
 import { handleIntent } from './domain/intent-handler.ts';
 import * as store from './domain/object-store.ts';
 import * as clipboard from './domain/clipboard.ts';
+import { undoManager } from './domain/undo-manager.ts';
 
 export const OBJECTS_MODULE_ID = 'objects';
 
@@ -32,7 +33,7 @@ export const objectsModule: AppModule<ObjectsApi> = {
   id: OBJECTS_MODULE_ID,
 
   async init(_ctx: ModuleContext): Promise<ObjectsApi> {
-    return {
+    const api: ObjectsApi = {
       applyLocal(intent: ObjectIntent) {
         let authApi: AuthApi | null = null;
         try {
@@ -148,6 +149,22 @@ export const objectsModule: AppModule<ObjectsApi> = {
         return created.map((o) => o.id);
       },
 
+      undo() {
+        const result = undoManager.undo(store.getAllObjects());
+        if (result) {
+          store.hydrateFromSnapshot(result);
+          emitChange();
+        }
+      },
+
+      redo() {
+        const result = undoManager.redo(store.getAllObjects());
+        if (result) {
+          store.hydrateFromSnapshot(result);
+          emitChange();
+        }
+      },
+
       hydrateFromSnapshot(objects: BoardObject[]) {
         store.hydrateFromSnapshot(objects);
         selectedIds = [];
@@ -185,7 +202,12 @@ export const objectsModule: AppModule<ObjectsApi> = {
       observeObjects(cb) {
         return objectsEvents.on('objectsChanged', cb);
       },
+
+      toggleReaction(objectId: string, emoji: string) {
+        api.applyLocal({ kind: 'toggle-reaction', objectId, emoji });
+      },
     };
+    return api;
   },
 
   async dispose() {

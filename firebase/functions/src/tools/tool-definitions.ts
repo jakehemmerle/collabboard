@@ -1,6 +1,6 @@
 import { tool } from 'ai';
 import { z } from 'zod';
-import type { Firestore } from 'firebase-admin/firestore';
+import { type Firestore, FieldValue } from 'firebase-admin/firestore';
 
 /**
  * Creates Vercel AI SDK tool definitions that read/write Firestore directly.
@@ -103,6 +103,12 @@ export function createToolDefinitions(db: Firestore, boardId: string) {
         style: z.enum(['arrow', 'line']).optional().describe('Connector style. Defaults to arrow'),
       }),
       execute: async ({ fromId, toId, style }) => {
+        const [fromDoc, toDoc] = await Promise.all([
+          objectsRef.doc(fromId).get(),
+          objectsRef.doc(toId).get(),
+        ]);
+        if (!fromDoc.exists) return { error: `Source object ${fromId} not found` };
+        if (!toDoc.exists) return { error: `Target object ${toId} not found` };
         const id = generateId();
         const now = Date.now();
         const obj = {
@@ -126,6 +132,8 @@ export function createToolDefinitions(db: Firestore, boardId: string) {
         y: z.number().describe('New Y position'),
       }),
       execute: async ({ objectId, x, y }) => {
+        const doc = await objectsRef.doc(objectId).get();
+        if (!doc.exists) return { error: 'Object not found' };
         const now = Date.now();
         await objectsRef.doc(objectId).update({ x, y, updatedAt: now });
         return { objectId, x, y };
@@ -140,6 +148,8 @@ export function createToolDefinitions(db: Firestore, boardId: string) {
         height: z.number().describe('New height'),
       }),
       execute: async ({ objectId, width, height }) => {
+        const doc = await objectsRef.doc(objectId).get();
+        if (!doc.exists) return { error: 'Object not found' };
         const now = Date.now();
         await objectsRef.doc(objectId).update({ width, height, updatedAt: now });
         return { objectId, width, height };
@@ -225,6 +235,111 @@ export function createToolDefinitions(db: Firestore, boardId: string) {
           return summary;
         });
         return { objectCount: objects.length, objects };
+      },
+    }),
+
+    createMultipleObjects: tool({
+      description: 'Create multiple objects on the board in a single batch operation. Use this for templates and multi-object layouts.',
+      inputSchema: z.object({
+        objects: z.array(z.object({
+          type: z.enum(['sticky', 'rectangle', 'circle', 'frame', 'connector']),
+          x: z.number().optional(),
+          y: z.number().optional(),
+          width: z.number().optional(),
+          height: z.number().optional(),
+          text: z.string().optional(),
+          title: z.string().optional(),
+          color: z.string().optional(),
+          fill: z.string().optional(),
+          sourceId: z.string().optional(),
+          targetId: z.string().optional(),
+          style: z.enum(['arrow', 'line']).optional(),
+        })).describe('Array of objects to create'),
+      }),
+      execute: async ({ objects }) => {
+        const batch = db.batch();
+        const now = Date.now();
+        const results: Array<Record<string, unknown>> = [];
+
+        for (const obj of objects) {
+          const id = generateId();
+          let doc: Record<string, unknown>;
+
+          switch (obj.type) {
+            case 'sticky':
+              doc = {
+                id, type: 'sticky',
+                x: obj.x ?? 0, y: obj.y ?? 0,
+                width: obj.width ?? 200, height: obj.height ?? 150,
+                text: obj.text ?? '', color: obj.color ?? 'yellow',
+                createdBy: 'ai-agent', createdAt: now, updatedAt: now,
+              };
+              break;
+            case 'rectangle':
+              doc = {
+                id, type: 'rectangle',
+                x: obj.x ?? 0, y: obj.y ?? 0,
+                width: obj.width ?? 200, height: obj.height ?? 150,
+                fill: obj.fill ?? '#E0E0E0', stroke: '#9E9E9E', strokeWidth: 1,
+                createdBy: 'ai-agent', createdAt: now, updatedAt: now,
+              };
+              break;
+            case 'circle':
+              doc = {
+                id, type: 'circle',
+                x: obj.x ?? 0, y: obj.y ?? 0,
+                width: obj.width ?? 100, height: obj.height ?? 100,
+                fill: obj.fill ?? '#90CAF9', stroke: '#42A5F5', strokeWidth: 2,
+                createdBy: 'ai-agent', createdAt: now, updatedAt: now,
+              };
+              break;
+            case 'frame':
+              doc = {
+                id, type: 'frame',
+                x: obj.x ?? 0, y: obj.y ?? 0,
+                width: obj.width ?? 400, height: obj.height ?? 300,
+                title: obj.title ?? '',
+                fill: 'rgba(200, 200, 200, 0.1)',
+                children: [] as string[],
+                createdBy: 'ai-agent', createdAt: now, updatedAt: now,
+              };
+              break;
+            case 'connector':
+              doc = {
+                id, type: 'connector',
+                x: 0, y: 0, width: 0, height: 0,
+                sourceId: obj.sourceId ?? '', targetId: obj.targetId ?? '',
+                style: obj.style ?? 'arrow',
+                stroke: '#616161', strokeWidth: 2,
+                createdBy: 'ai-agent', createdAt: now, updatedAt: now,
+              };
+              break;
+          }
+
+          batch.set(objectsRef.doc(id), doc!);
+          results.push({ id, type: obj.type });
+        }
+
+        await batch.commit();
+        return { created: results.length, objects: results };
+      },
+    }),
+
+    addToFrame: tool({
+      description: 'Add one or more existing objects to a frame, making them children of that frame',
+      inputSchema: z.object({
+        frameId: z.string().describe('ID of the frame to add objects to'),
+        objectIds: z.array(z.string()).describe('IDs of objects to add to the frame'),
+      }),
+      execute: async ({ frameId, objectIds }) => {
+        const frameDoc = await objectsRef.doc(frameId).get();
+        if (!frameDoc.exists) return { error: 'Frame not found' };
+        if (frameDoc.data()!.type !== 'frame') return { error: 'Target is not a frame' };
+        await objectsRef.doc(frameId).update({
+          children: FieldValue.arrayUnion(...objectIds),
+          updatedAt: Date.now(),
+        });
+        return { frameId, addedObjects: objectIds };
       },
     }),
   };

@@ -8,6 +8,7 @@ import {
   DEFAULT_LINE_LENGTH, DEFAULT_TEXT_SIZE, DEFAULT_FRAME_SIZE,
 } from '../contracts.ts';
 import * as store from './object-store.ts';
+import { undoManager } from './undo-manager.ts';
 
 export function cloneObject(source: BoardObject, actorId: string, offsetX: number, offsetY: number): BoardObject {
   const now = Date.now();
@@ -38,6 +39,7 @@ export function cloneObject(source: BoardObject, actorId: string, offsetX: numbe
 }
 
 export function handleIntent(intent: ObjectIntent, actorId: string): ApplyResult {
+  undoManager.pushState(store.getAllObjects());
   const now = Date.now();
 
   switch (intent.kind) {
@@ -212,6 +214,26 @@ export function handleIntent(intent: ObjectIntent, actorId: string): ApplyResult
       const obj = store.getObject(intent.objectId);
       if (!obj || obj.type !== 'frame') return { ok: false };
       store.updateObject(intent.objectId, { children: intent.children } as Partial<FrameObject>);
+      return { ok: true, objectId: intent.objectId };
+    }
+    case 'toggle-reaction': {
+      const obj = store.getObject(intent.objectId);
+      if (!obj || obj.type !== 'sticky') return { ok: false };
+      const sticky = obj as StickyNote;
+      const reactions = { ...(sticky.reactions ?? {}) };
+      const users = reactions[intent.emoji] ? [...reactions[intent.emoji]] : [];
+      const idx = users.indexOf(actorId);
+      if (idx >= 0) {
+        users.splice(idx, 1);
+        if (users.length === 0) {
+          delete reactions[intent.emoji];
+        } else {
+          reactions[intent.emoji] = users;
+        }
+      } else {
+        reactions[intent.emoji] = [...users, actorId];
+      }
+      store.updateObject(intent.objectId, { reactions } as Partial<StickyNote>);
       return { ok: true, objectId: intent.objectId };
     }
   }
