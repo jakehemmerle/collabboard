@@ -11,6 +11,10 @@ export function useObjects() {
   const stateRef = useRef<ObjectsState>(getApi().getSnapshot());
 
   const subscribe = useCallback((onStoreChange: () => void) => {
+    // Sync from the source of truth on (re-)subscribe so useSyncExternalStore
+    // detects any state changes that occurred while unsubscribed (e.g. React
+    // StrictMode unmount/remount where hydration events can be missed).
+    stateRef.current = getApi().getSnapshot();
     return objectsEvents.on('objectsChanged', (state) => {
       stateRef.current = state;
       onStoreChange();
@@ -105,6 +109,18 @@ export function useObjects() {
     getApi().deselectAll();
   }, []);
 
+  const undo = useCallback(() => {
+    getApi().undo();
+  }, []);
+
+  const redo = useCallback(() => {
+    getApi().redo();
+  }, []);
+
+  const toggleReaction = useCallback((objectId: string, emoji: string) => {
+    return getApi().applyLocal({ kind: 'toggle-reaction', objectId, emoji });
+  }, []);
+
   return {
     objects: state.objects,
     selectedIds: state.selectedIds,
@@ -129,5 +145,8 @@ export function useObjects() {
     createConnector,
     createFrame,
     updateFrameChildren,
+    undo,
+    redo,
+    toggleReaction,
   };
 }

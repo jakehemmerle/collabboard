@@ -14,6 +14,7 @@ export function useViewport() {
   const stageRef = useRef<Konva.Stage | null>(null);
 
   const subscribe = useCallback((onStoreChange: () => void) => {
+    cameraRef.current = getApi().getCamera();
     return viewportEvents.on('cameraChanged', (cam) => {
       cameraRef.current = cam;
       onStoreChange();
@@ -62,6 +63,24 @@ export function useViewport() {
     }
   }, []);
 
+  const zoomIn = useCallback(() => {
+    getApi().zoomIn();
+  }, []);
+
+  const zoomOut = useCallback(() => {
+    getApi().zoomOut();
+  }, []);
+
+  const fitContent = useCallback((objects: Array<{x: number, y: number, width: number, height: number}>, vw: number, vh: number) => {
+    getApi().fitContent(objects, vw, vh);
+    const cam = getApi().getCamera();
+    const stage = stageRef.current;
+    if (stage) {
+      stage.position({ x: cam.x, y: cam.y });
+      stage.scale({ x: cam.scale, y: cam.scale });
+    }
+  }, []);
+
   const stageProps = {
     x: camera.x,
     y: camera.y,
@@ -72,5 +91,5 @@ export function useViewport() {
     onWheel: handleWheel,
   };
 
-  return { camera, stageProps, stageRef, resetView };
+  return { camera, stageProps, stageRef, resetView, zoomIn, zoomOut, fitContent };
 }
