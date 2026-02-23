@@ -4,8 +4,11 @@ import type { CursorState, PresenceUser } from '../contracts.ts';
 // ── Mock connectPresence ────────────────────────────────────────────────
 let cursorCallback: ((cursors: CursorState[]) => void) | null = null;
 let presenceCallback: ((users: PresenceUser[]) => void) | null = null;
-const mockPublishCursor = vi.fn();
-const mockCleanup = vi.fn().mockResolvedValue(undefined);
+
+const { mockPublishCursor, mockCleanup } = vi.hoisted(() => ({
+  mockPublishCursor: vi.fn(),
+  mockCleanup: vi.fn().mockResolvedValue(undefined),
+}));
 
 vi.mock('../infrastructure/rtdb-presence.ts', () => ({
   connectPresence: vi.fn().mockResolvedValue({
