@@ -13,6 +13,11 @@ export interface Membership {
   joinedAt: number;
 }
 
+export interface BoardListEntry extends BoardMeta {
+  memberCount: number;
+  role: BoardRole;
+}
+
 export interface CreateBoardInput {
   title?: string;
 }
@@ -24,4 +29,7 @@ export interface BoardAccessApi {
   joinBoard(boardId: string): Promise<void>;
   grantMembership(boardId: string, userId: string, role: BoardRole): Promise<void>;
   observeMembership(boardId: string, cb: (m: Membership | null) => void): () => void;
+  deleteBoard(boardId: string): Promise<void>;
+  listBoards(): Promise<BoardListEntry[]>;
+  observeBoards(cb: (boards: BoardListEntry[]) => void): () => void;
 }

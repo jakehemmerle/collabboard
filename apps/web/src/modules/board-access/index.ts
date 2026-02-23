@@ -1,10 +1,17 @@
 import {
   doc,
   getDoc,
+  getDocs,
   setDoc,
   updateDoc,
+  deleteDoc,
   onSnapshot,
   serverTimestamp,
+  collection,
+  query,
+  where,
+  orderBy,
+  arrayUnion,
 } from 'firebase/firestore';
 import type { AppModule, ModuleContext } from '../../core/module-system.ts';
 import { getFirebaseDb } from '../../core/firebase.ts';
@@ -15,7 +22,7 @@ import { PERMISSIONS_MODULE_ID } from '../permissions/index.ts';
 import type { AuthApi } from '../auth/contracts.ts';
 import type { PermissionsApi } from '../permissions/contracts.ts';
 import type { BoardRole } from '../permissions/contracts.ts';
-import type { BoardAccessApi, BoardMeta, Membership } from './contracts.ts';
+import type { BoardAccessApi, BoardMeta, BoardListEntry, Membership } from './contracts.ts';
 
 export const BOARD_ACCESS_MODULE_ID = 'board-access';
 
@@ -63,6 +70,7 @@ export const boardAccessModule: AppModule<BoardAccessApi> = {
           members: {
             [uid]: { role: 'owner' as BoardRole, joinedAt: Date.now() },
           },
+          memberUids: [uid],
         });
 
         return { boardId };
@@ -93,6 +101,7 @@ export const boardAccessModule: AppModule<BoardAccessApi> = {
         const boardRef = doc(db, 'boards', boardId);
         await updateDoc(boardRef, {
           [`members.${uid}`]: { role: 'collaborator' as BoardRole, joinedAt: Date.now() },
+          memberUids: arrayUnion(uid),
         });
       },
 
@@ -110,6 +119,7 @@ export const boardAccessModule: AppModule<BoardAccessApi> = {
             members: {
               [userId]: { role, joinedAt: serverTimestamp() },
             },
+            memberUids: arrayUnion(userId),
           },
           { merge: true },
         );
@@ -139,6 +149,66 @@ export const boardAccessModule: AppModule<BoardAccessApi> = {
             role: memberEntry.role as BoardRole,
             joinedAt: memberEntry.joinedAt ?? Date.now(),
           } as Membership);
+        });
+      },
+
+      async deleteBoard(boardId) {
+        const result = await getCallerRole(boardId);
+        if (!result) throw new Error('Not a member of this board');
+        if (!getPermissions().can('board:delete', { role: result.role })) {
+          throw new Error('Not authorized to delete this board');
+        }
+        await deleteDoc(doc(db, 'boards', boardId));
+      },
+
+      async listBoards() {
+        const uid = requireUid();
+        const q = query(
+          collection(db, 'boards'),
+          where('memberUids', 'array-contains', uid),
+          orderBy('createdAt', 'desc'),
+        );
+        const snap = await getDocs(q);
+        return snap.docs.map((d) => {
+          const data = d.data();
+          const members = data.members ?? {};
+          return {
+            id: d.id,
+            title: data.title ?? 'Untitled Board',
+            ownerId: data.ownerId,
+            createdAt: data.createdAt?.toMillis?.() ?? Date.now(),
+            memberCount: Object.keys(members).length,
+            role: (members[uid]?.role ?? 'collaborator') as BoardRole,
+          } as BoardListEntry;
+        });
+      },
+
+      observeBoards(cb) {
+        const user = getAuth().currentUser();
+        if (!user) {
+          cb([]);
+          return () => {};
+        }
+        const uid = user.uid;
+        const q = query(
+          collection(db, 'boards'),
+          where('memberUids', 'array-contains', uid),
+          orderBy('createdAt', 'desc'),
+        );
+        return onSnapshot(q, (snap) => {
+          const boards = snap.docs.map((d) => {
+            const data = d.data();
+            const members = data.members ?? {};
+            return {
+              id: d.id,
+              title: data.title ?? 'Untitled Board',
+              ownerId: data.ownerId,
+              createdAt: data.createdAt?.toMillis?.() ?? Date.now(),
+              memberCount: Object.keys(members).length,
+              role: (members[uid]?.role ?? 'collaborator') as BoardRole,
+            } as BoardListEntry;
+          });
+          cb(boards);
         });
       },
     };
