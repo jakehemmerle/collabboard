@@ -1,4 +1,4 @@
-import { useParams } from 'react-router';
+import { useParams, useNavigate } from 'react-router';
 import { Stage, Layer } from 'react-konva';
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useKeyboardShortcuts } from '../../shared/hooks/useKeyboardShortcuts.ts';
@@ -35,7 +35,7 @@ import { PRESENCE_MODULE_ID } from '../../modules/presence/index.ts';
 import { CursorLayer } from '../../modules/presence/ui/CursorLayer.tsx';
 import { PresenceRoster } from '../../modules/presence/ui/PresenceRoster.tsx';
 import { AiChatPanel } from '../../modules/ai-agent/ui/AiChatPanel.tsx';
-import { subscribeToChatMessages, persistChatMessages } from '../../modules/ai-agent/infrastructure/chat-sync.ts';
+import { subscribeToChatMessages, persistChatMessages, clearChatMessages } from '../../modules/ai-agent/infrastructure/chat-sync.ts';
 import type { UIMessage } from 'ai';
 import { ShortcutHelp } from '../../shared/ui/ShortcutHelp.tsx';
 import { ToastContainer } from '../../shared/ui/ToastContainer.tsx';
@@ -126,6 +126,7 @@ export function BoardPage() {
 
 function BoardCanvas({ boardId, width, height }: { boardId: string; width: number; height: number }) {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const { resolveToken } = useTheme();
   const gridDotColor = resolveToken('--cb-grid-dot');
   const { camera, stageProps, stageRef, resetView, zoomIn, zoomOut, fitContent } = useViewport();
@@ -191,6 +192,13 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
   const handleAiNewMessages = useCallback((messages: UIMessage[]) => {
     persistChatMessages(boardId, messages).catch((err) => {
       console.error('[BoardPage] Failed to persist AI messages:', err);
+    });
+  }, [boardId]);
+
+  const handleAiClearMessages = useCallback(() => {
+    setAiInitialMessages([]);
+    clearChatMessages(boardId).catch((err) => {
+      console.error('[BoardPage] Failed to clear AI messages:', err);
     });
   }, [boardId]);
 
@@ -800,25 +808,37 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
 
       <PresenceRoster />
 
-      <button
-        onClick={handleShare}
-        style={{
-          position: 'absolute',
-          top: 16,
-          left: 16,
-          padding: '8px 16px',
-          background: copied ? v('--cb-success') : v('--cb-bg-surface'),
-          color: copied ? v('--cb-text-on-primary') : v('--cb-text-primary'),
-          border: `1px solid ${v('--cb-border-strong')}`,
-          borderRadius: 4,
-          cursor: 'pointer',
-          fontSize: 14,
-          zIndex: 10,
-          transition: 'background 0.2s, color 0.2s',
-        }}
-      >
-        {copied ? 'Link Copied!' : 'Share'}
-      </button>
+      <div style={{ position: 'absolute', top: 16, left: 16, display: 'flex', gap: 8, zIndex: 10 }}>
+        <button
+          onClick={() => navigate('/')}
+          style={{
+            padding: '8px 16px',
+            background: v('--cb-bg-surface'),
+            color: v('--cb-text-primary'),
+            border: `1px solid ${v('--cb-border-strong')}`,
+            borderRadius: 4,
+            cursor: 'pointer',
+            fontSize: 14,
+          }}
+        >
+          ← Back
+        </button>
+        <button
+          onClick={handleShare}
+          style={{
+            padding: '8px 16px',
+            background: copied ? v('--cb-success') : v('--cb-bg-surface'),
+            color: copied ? v('--cb-text-on-primary') : v('--cb-text-primary'),
+            border: `1px solid ${v('--cb-border-strong')}`,
+            borderRadius: 4,
+            cursor: 'pointer',
+            fontSize: 14,
+            transition: 'background 0.2s, color 0.2s',
+          }}
+        >
+          {copied ? 'Link Copied!' : 'Share'}
+        </button>
+      </div>
 
       <ZoomControls
         camera={camera}
@@ -896,6 +916,7 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
         boardId={boardId}
         initialMessages={aiInitialMessages}
         onNewMessages={handleAiNewMessages}
+        onClearMessages={handleAiClearMessages}
       />
 
       <ShortcutHelp open={showShortcutHelp} onClose={() => setShowShortcutHelp(false)} />

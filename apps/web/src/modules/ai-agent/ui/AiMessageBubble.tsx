@@ -1,5 +1,6 @@
-import { memo } from 'react';
+import { memo, useState } from 'react';
 import type { UIMessage } from 'ai';
+import { isToolUIPart, getToolOrDynamicToolName } from 'ai';
 import Markdown from 'react-markdown';
 import { v } from '../../../shared/theme/theme-utils.ts';
 
@@ -65,6 +66,93 @@ function describeToolResult(
 
 function truncate(s: string, max: number): string {
   return s.length > max ? s.slice(0, max) + '…' : s;
+}
+
+// --- ToolCallDisplay (Feature 3) ---
+
+interface ToolCallDisplayProps {
+  toolName: string;
+  input: Record<string, unknown>;
+  state: string;
+  output?: Record<string, unknown>;
+}
+
+export function ToolCallDisplay({ toolName, input, state, output }: ToolCallDisplayProps) {
+  const [expanded, setExpanded] = useState(false);
+
+  const done = state === 'output-available';
+  const isError = done && output && typeof output === 'object' && 'error' in output;
+  const description = describeToolResult(toolName, input, output, done);
+
+  return (
+    <div
+      role="button"
+      onClick={() => setExpanded(!expanded)}
+      style={{
+        fontSize: 12,
+        margin: '4px 0',
+        padding: '6px 8px',
+        borderRadius: 6,
+        background: isError ? v('--cb-error-light') : v('--cb-bg-surface'),
+        border: `1px solid ${isError ? v('--cb-error-border') : v('--cb-border-subtle')}`,
+        cursor: 'pointer',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        {done && !isError && <span>✓</span>}
+        {done && isError && <span style={{ color: v('--cb-error') }}>✗</span>}
+        {!done && <span style={{ color: v('--cb-text-tertiary') }}>⏳</span>}
+        <span style={{ fontWeight: 700 }}>{toolName}</span>
+      </div>
+      <div
+        style={{
+          color: isError ? v('--cb-error') : v('--cb-text-tertiary'),
+          fontStyle: 'italic',
+          marginTop: 2,
+        }}
+      >
+        {description}
+      </div>
+      {expanded && (
+        <div style={{ marginTop: 8 }}>
+          <div style={{ fontSize: 11, fontWeight: 600, marginBottom: 2 }}>Input:</div>
+          <pre
+            style={{
+              background: 'rgba(0,0,0,0.06)',
+              borderRadius: 4,
+              padding: '4px 6px',
+              fontSize: 11,
+              fontFamily: 'monospace',
+              overflow: 'auto',
+              margin: 0,
+              whiteSpace: 'pre-wrap',
+            }}
+          >
+            {JSON.stringify(input, null, 2)}
+          </pre>
+          {output && (
+            <>
+              <div style={{ fontSize: 11, fontWeight: 600, marginBottom: 2, marginTop: 6 }}>Output:</div>
+              <pre
+                style={{
+                  background: 'rgba(0,0,0,0.06)',
+                  borderRadius: 4,
+                  padding: '4px 6px',
+                  fontSize: 11,
+                  fontFamily: 'monospace',
+                  overflow: 'auto',
+                  margin: 0,
+                  whiteSpace: 'pre-wrap',
+                }}
+              >
+                {JSON.stringify(output, null, 2)}
+              </pre>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
 const markdownStyles: Record<string, React.CSSProperties> = {
@@ -147,28 +235,21 @@ export const AiMessageBubble = memo(function AiMessageBubble({ message }: AiMess
               </Markdown>
             );
           }
-          if (part.type === 'dynamic-tool') {
-            const done = part.state === 'output-available';
-            const args = (part.input ?? undefined) as Record<string, unknown> | undefined;
+          if (isToolUIPart(part)) {
+            const toolName = getToolOrDynamicToolName(part);
+            const args = ('input' in part ? (part.input ?? {}) : {}) as Record<string, unknown>;
             const output = ('output' in part ? part.output : undefined) as
               | Record<string, unknown>
               | undefined;
-            const description = describeToolResult(part.toolName, args, output, done);
-            const isError = done && output && typeof output === 'object' && 'error' in output;
 
             return (
-              <div
+              <ToolCallDisplay
                 key={i}
-                style={{
-                  fontSize: 12,
-                  color: isError ? v('--cb-error') : isUser ? '#B3D4FC' : v('--cb-text-tertiary'),
-                  fontStyle: 'italic',
-                  margin: '4px 0',
-                }}
-              >
-                {done && !isError ? '✓ ' : ''}
-                {description}
-              </div>
+                toolName={toolName}
+                input={args}
+                state={part.state}
+                output={output}
+              />
             );
           }
           return null;

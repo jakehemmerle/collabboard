@@ -5,6 +5,8 @@ import {
   onSnapshot,
   query,
   orderBy,
+  getDocs,
+  writeBatch,
 } from 'firebase/firestore';
 import { getFirebaseDb } from '../../../core/firebase.ts';
 import type { UIMessage } from 'ai';
@@ -31,6 +33,20 @@ export function subscribeToChatMessages(
     });
     onMessages(messages);
   });
+}
+
+/**
+ * Delete all AI chat messages for a board from Firestore.
+ */
+export async function clearChatMessages(boardId: string): Promise<void> {
+  const db = getFirebaseDb();
+  const messagesRef = collection(db, `boards/${boardId}/ai-messages`);
+  const snapshot = await getDocs(messagesRef);
+  const batch = writeBatch(db);
+  for (const d of snapshot.docs) {
+    batch.delete(d.ref);
+  }
+  await batch.commit();
 }
 
 /**

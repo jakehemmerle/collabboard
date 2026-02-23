@@ -14,9 +14,10 @@ interface AiChatPanelProps {
   boardId: string;
   initialMessages?: UIMessage[];
   onNewMessages?: (messages: UIMessage[]) => void;
+  onClearMessages?: () => void;
 }
 
-export function AiChatPanel({ boardId, initialMessages, onNewMessages }: AiChatPanelProps) {
+export function AiChatPanel({ boardId, initialMessages, onNewMessages, onClearMessages }: AiChatPanelProps) {
   const [open, setOpen] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -43,7 +44,7 @@ export function AiChatPanel({ boardId, initialMessages, onNewMessages }: AiChatP
     [functionUrl, boardId],
   );
 
-  const { messages, sendMessage, status, setMessages, error, clearError } = useChat({
+  const { messages, sendMessage, status, setMessages, error, clearError, stop } = useChat({
     id: `board-${boardId}`,
     transport,
     messages: initialMessages,
@@ -141,19 +142,39 @@ export function AiChatPanel({ boardId, initialMessages, onNewMessages }: AiChatP
         }}
       >
         <span style={{ fontWeight: 600, fontSize: 14 }}>AI Assistant</span>
-        <button
-          onClick={() => setOpen(false)}
-          style={{
-            background: 'none',
-            border: 'none',
-            color: v('--cb-text-on-primary'),
-            cursor: 'pointer',
-            fontSize: 18,
-            padding: '0 4px',
-          }}
-        >
-          &times;
-        </button>
+        <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+          <button
+            onClick={() => {
+              setMessages([]);
+              onClearMessages?.();
+            }}
+            title="Clear chat"
+            style={{
+              background: 'none',
+              border: 'none',
+              color: v('--cb-text-on-primary'),
+              cursor: 'pointer',
+              fontSize: 14,
+              padding: '0 4px',
+              opacity: 0.8,
+            }}
+          >
+            Clear
+          </button>
+          <button
+            onClick={() => setOpen(false)}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: v('--cb-text-on-primary'),
+              cursor: 'pointer',
+              fontSize: 18,
+              padding: '0 4px',
+            }}
+          >
+            &times;
+          </button>
+        </div>
       </div>
 
       {/* Messages */}
@@ -225,7 +246,7 @@ export function AiChatPanel({ boardId, initialMessages, onNewMessages }: AiChatP
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
           placeholder={functionUrl ? 'Type a command...' : 'AI not configured'}
-          disabled={!functionUrl || isLoading}
+          disabled={!functionUrl}
           style={{
             flex: 1,
             padding: '8px 12px',
@@ -237,21 +258,39 @@ export function AiChatPanel({ boardId, initialMessages, onNewMessages }: AiChatP
             color: v('--cb-text-primary'),
           }}
         />
-        <button
-          type="submit"
-          disabled={!inputValue.trim() || !functionUrl || isLoading}
-          style={{
-            padding: '8px 16px',
-            background: !inputValue.trim() || !functionUrl || isLoading ? v('--cb-input-disabled-bg') : v('--cb-primary'),
-            color: v('--cb-text-on-primary'),
-            border: 'none',
-            borderRadius: 8,
-            cursor: !inputValue.trim() || !functionUrl || isLoading ? 'default' : 'pointer',
-            fontSize: 14,
-          }}
-        >
-          Send
-        </button>
+        {isLoading ? (
+          <button
+            type="button"
+            onClick={() => stop()}
+            style={{
+              padding: '8px 16px',
+              background: v('--cb-error'),
+              color: v('--cb-text-on-primary'),
+              border: 'none',
+              borderRadius: 8,
+              cursor: 'pointer',
+              fontSize: 14,
+            }}
+          >
+            Stop
+          </button>
+        ) : (
+          <button
+            type="submit"
+            disabled={!inputValue.trim() || !functionUrl}
+            style={{
+              padding: '8px 16px',
+              background: !inputValue.trim() || !functionUrl ? v('--cb-input-disabled-bg') : v('--cb-primary'),
+              color: v('--cb-text-on-primary'),
+              border: 'none',
+              borderRadius: 8,
+              cursor: !inputValue.trim() || !functionUrl ? 'default' : 'pointer',
+              fontSize: 14,
+            }}
+          >
+            Send
+          </button>
+        )}
       </form>
     </div>
   );
