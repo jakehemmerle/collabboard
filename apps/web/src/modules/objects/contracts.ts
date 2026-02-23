@@ -141,6 +141,8 @@ export interface ObjectsApi {
   redo(): void;
   canUndo(): boolean;
   canRedo(): boolean;
+  beginTransaction(): void;
+  commitTransaction(): void;
   observeObjects(cb: (state: ObjectsState) => void): () => void;
   toggleReaction(objectId: string, emoji: string): void;
 }

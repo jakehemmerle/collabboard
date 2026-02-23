@@ -7,6 +7,7 @@ interface CircleShapeProps {
   obj: CircleObject;
   isSelected: boolean;
   onSelect: (e: Konva.KonvaEventObject<MouseEvent | TouchEvent>) => void;
+  onDragStart?: () => void;
   onDragMove?: (x: number, y: number) => void;
   onDragEnd: (x: number, y: number) => void;
 }
@@ -15,6 +16,7 @@ export const CircleShape = React.memo(function CircleShape({
   obj,
   isSelected,
   onSelect,
+  onDragStart,
   onDragMove,
   onDragEnd,
 }: CircleShapeProps) {
@@ -40,6 +42,7 @@ export const CircleShape = React.memo(function CircleShape({
       draggable
       onClick={onSelect}
       onTap={onSelect}
+      onDragStart={onDragStart}
       onDragMove={handleDragMove}
       onDragEnd={handleDragEnd}
     >

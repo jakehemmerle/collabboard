@@ -5,8 +5,10 @@ import { computeResize, computeRotation } from '../domain/geometry.ts';
 
 interface TransformHandlesProps {
   bounds: BoundingBox;
+  onResizeStart?: () => void;
   onResize: (newBounds: BoundingBox) => void;
   onResizeEnd: (newBounds: BoundingBox) => void;
+  onRotateStart?: () => void;
   onRotate?: (rotation: number) => void;
   onRotateEnd?: (rotation: number) => void;
 }
@@ -32,8 +34,10 @@ const HANDLES: {
 
 export const TransformHandles = React.memo(function TransformHandles({
   bounds,
+  onResizeStart,
   onResize,
   onResizeEnd,
+  onRotateStart,
   onRotate,
   onRotateEnd,
 }: TransformHandlesProps) {
@@ -80,6 +84,7 @@ export const TransformHandles = React.memo(function TransformHandles({
             onDragStart={() => {
               originalBoundsRef.current = bounds;
               dragStartPosRef.current = { x: hx - HANDLE_SIZE / 2, y: hy - HANDLE_SIZE / 2 };
+              if (onResizeStart) onResizeStart();
             }}
             onDragMove={(e) => {
               const node = e.target;
@@ -131,6 +136,7 @@ export const TransformHandles = React.memo(function TransformHandles({
         draggable
         onDragStart={() => {
           rotationCenterRef.current = { x: centerX, y: bounds.y + bounds.height / 2 };
+          if (onRotateStart) onRotateStart();
         }}
         onDragMove={(e) => {
           if (!onRotate) return;

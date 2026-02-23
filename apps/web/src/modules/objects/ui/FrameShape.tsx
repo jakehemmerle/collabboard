@@ -7,6 +7,7 @@ interface FrameShapeProps {
   obj: FrameObject;
   isSelected: boolean;
   onSelect: (e: Konva.KonvaEventObject<MouseEvent | TouchEvent>) => void;
+  onDragStart?: () => void;
   onDragMove?: (x: number, y: number) => void;
   onDragEnd: (x: number, y: number) => void;
   onDblClick?: () => void;
@@ -16,6 +17,7 @@ export const FrameShape = React.memo(function FrameShape({
   obj,
   isSelected,
   onSelect,
+  onDragStart,
   onDragMove,
   onDragEnd,
   onDblClick,
@@ -40,6 +42,7 @@ export const FrameShape = React.memo(function FrameShape({
       draggable
       onClick={onSelect}
       onTap={onSelect}
+      onDragStart={onDragStart}
       onDblClick={onDblClick}
       onDblTap={onDblClick}
       onDragMove={handleDragMove}

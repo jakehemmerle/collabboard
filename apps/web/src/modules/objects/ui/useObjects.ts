@@ -117,6 +117,14 @@ export function useObjects() {
     getApi().redo();
   }, []);
 
+  const beginTransaction = useCallback(() => {
+    getApi().beginTransaction();
+  }, []);
+
+  const commitTransaction = useCallback(() => {
+    getApi().commitTransaction();
+  }, []);
+
   const toggleReaction = useCallback((objectId: string, emoji: string) => {
     return getApi().applyLocal({ kind: 'toggle-reaction', objectId, emoji });
   }, []);
@@ -149,6 +157,8 @@ export function useObjects() {
     redo,
     canUndo: getApi().canUndo(),
     canRedo: getApi().canRedo(),
+    beginTransaction,
+    commitTransaction,
     toggleReaction,
   };
 }

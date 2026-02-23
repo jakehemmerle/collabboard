@@ -7,6 +7,7 @@ interface LineShapeProps {
   obj: LineObject;
   isSelected: boolean;
   onSelect: (e: Konva.KonvaEventObject<MouseEvent | TouchEvent>) => void;
+  onDragStart?: () => void;
   onDragMove?: (x: number, y: number) => void;
   onDragEnd: (x: number, y: number) => void;
 }
@@ -15,6 +16,7 @@ export const LineShape = React.memo(function LineShape({
   obj,
   isSelected,
   onSelect,
+  onDragStart,
   onDragMove,
   onDragEnd,
 }: LineShapeProps) {
@@ -40,6 +42,7 @@ export const LineShape = React.memo(function LineShape({
       draggable
       onClick={onSelect}
       onTap={onSelect}
+      onDragStart={onDragStart}
       onDragMove={handleDragMove}
       onDragEnd={handleDragEnd}
     >

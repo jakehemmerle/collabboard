@@ -213,6 +213,14 @@ export const objectsModule: AppModule<ObjectsApi> = {
         return undoManager.canRedo();
       },
 
+      beginTransaction() {
+        undoManager.beginTransaction(store.getAllObjects());
+      },
+
+      commitTransaction() {
+        undoManager.commitTransaction();
+      },
+
       hydrateFromSnapshot(objects: BoardObject[]) {
         store.hydrateFromSnapshot(objects);
         selectedIds = [];

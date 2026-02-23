@@ -5,8 +5,24 @@ const MAX_STACK_DEPTH = 50;
 class UndoManager {
   private undoStack: BoardObject[][] = [];
   private redoStack: BoardObject[][] = [];
+  private inTransaction = false;
+
+  beginTransaction(objects: BoardObject[]): void {
+    if (this.inTransaction) return;
+    this.inTransaction = true;
+    this.undoStack.push(structuredClone(objects));
+    if (this.undoStack.length > MAX_STACK_DEPTH) {
+      this.undoStack.shift();
+    }
+    this.redoStack = [];
+  }
+
+  commitTransaction(): void {
+    this.inTransaction = false;
+  }
 
   pushState(objects: BoardObject[]): void {
+    if (this.inTransaction) return;
     this.undoStack.push(structuredClone(objects));
     if (this.undoStack.length > MAX_STACK_DEPTH) {
       this.undoStack.shift();

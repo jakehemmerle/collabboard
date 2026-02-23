@@ -7,6 +7,7 @@ interface RectangleShapeProps {
   obj: RectangleObject;
   isSelected: boolean;
   onSelect: (e: Konva.KonvaEventObject<MouseEvent | TouchEvent>) => void;
+  onDragStart?: () => void;
   onDragMove?: (x: number, y: number) => void;
   onDragEnd: (x: number, y: number) => void;
 }
@@ -15,6 +16,7 @@ export const RectangleShape = React.memo(function RectangleShape({
   obj,
   isSelected,
   onSelect,
+  onDragStart,
   onDragMove,
   onDragEnd,
 }: RectangleShapeProps) {
@@ -38,6 +40,7 @@ export const RectangleShape = React.memo(function RectangleShape({
       draggable
       onClick={onSelect}
       onTap={onSelect}
+      onDragStart={onDragStart}
       onDragMove={handleDragMove}
       onDragEnd={handleDragEnd}
     >

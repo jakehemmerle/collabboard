@@ -157,6 +157,8 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
     redo,
     canUndo,
     canRedo,
+    beginTransaction,
+    commitTransaction,
     toggleReaction,
   } = useObjects();
 
@@ -289,10 +291,12 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
 
   useKeyboardShortcuts({
     onDelete: () => {
+      beginTransaction();
       for (const id of selectedIds) {
         deleteObject(id);
       }
       deselectAll();
+      commitTransaction();
     },
     onSelectAll: selectAll,
     onDuplicate: () => {
@@ -343,12 +347,41 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
     }
   }, [selectedObjs, selectionBounds, moveObject, resizeObject]);
 
+  // Resize end handler: applies final bounds and commits the transaction
+  const handleObjectResizeEnd = useCallback((newBounds: BoundingBox) => {
+    if (!selectionBounds || selectedObjs.length === 0) return;
+
+    if (selectedObjs.length === 1) {
+      const obj = selectedObjs[0];
+      moveObject(obj.id, newBounds.x, newBounds.y);
+      resizeObject(obj.id, newBounds.width, newBounds.height);
+    } else {
+      const scaleX = selectionBounds.width > 0 ? newBounds.width / selectionBounds.width : 1;
+      const scaleY = selectionBounds.height > 0 ? newBounds.height / selectionBounds.height : 1;
+      for (const obj of selectedObjs) {
+        const relX = obj.x - selectionBounds.x;
+        const relY = obj.y - selectionBounds.y;
+        moveObject(obj.id, newBounds.x + relX * scaleX, newBounds.y + relY * scaleY);
+        resizeObject(obj.id, obj.width * scaleX, obj.height * scaleY);
+      }
+    }
+    commitTransaction();
+  }, [selectedObjs, selectionBounds, moveObject, resizeObject, commitTransaction]);
+
   // Rotation handler
   const handleObjectRotate = useCallback((rotation: number) => {
     for (const obj of selectedObjs) {
       rotateObject(obj.id, rotation);
     }
   }, [selectedObjs, rotateObject]);
+
+  // Rotation end handler: applies final rotation and commits the transaction
+  const handleObjectRotateEnd = useCallback((rotation: number) => {
+    for (const obj of selectedObjs) {
+      rotateObject(obj.id, rotation);
+    }
+    commitTransaction();
+  }, [selectedObjs, rotateObject, commitTransaction]);
 
   const editingObj = editingId !== null
     ? (objects.find((o) => o.id === editingId && (o.type === 'sticky' || o.type === 'text' || o.type === 'frame')) as StickyNote | TextObject | FrameObject | undefined)
@@ -396,9 +429,11 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
   }
 
   function handleChangeColor(color: string) {
+    beginTransaction();
     for (const obj of selectedObjs) {
       updateColor(obj.id, color);
     }
+    commitTransaction();
   }
 
   function handleDuplicate() {
@@ -408,10 +443,12 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
   }
 
   function handleDelete() {
+    beginTransaction();
     for (const id of selectedIds) {
       deleteObject(id);
     }
     deselectAll();
+    commitTransaction();
   }
 
   function handleObjectSelect(objectId: string, e: Konva.KonvaEventObject<MouseEvent | TouchEvent>) {
@@ -456,6 +493,7 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
     moveObject(frameId, x, y);
     setSnapGuides([]);
     recomputeAllFrameChildren();
+    commitTransaction();
   }
 
   // Regular object drag end: move then recompute frame children
@@ -463,13 +501,16 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
     moveObject(objectId, x, y);
     setSnapGuides([]);
     recomputeAllFrameChildren();
+    commitTransaction();
   }
 
   // Alignment handlers for SelectionBar
   function applyAlignment(updates: Array<{ id: string; x: number; y: number }>) {
+    beginTransaction();
     for (const u of updates) {
       moveObject(u.id, u.x, u.y);
     }
+    commitTransaction();
   }
   const handleAlignLeft = () => applyAlignment(alignLeft(selectedObjs));
   const handleAlignRight = () => applyAlignment(alignRight(selectedObjs));
@@ -610,6 +651,7 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
                 obj={obj}
                 isSelected={selectedIds.includes(obj.id)}
                 onSelect={(e) => handleObjectSelect(obj.id, e)}
+                onDragStart={beginTransaction}
                 onDragMove={(x, y) => handleDragMove(obj.id, x, y)}
                 onDragEnd={(x, y) => handleFrameDragEnd(obj.id, x, y)}
                 onDblClick={() => setEditingId(obj.id)}
@@ -644,6 +686,7 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
                   obj={obj}
                   isSelected={isSelected}
                   onSelect={(e) => handleObjectSelect(obj.id, e)}
+                  onDragStart={beginTransaction}
                   onDragMove={(x, y) => handleDragMove(obj.id, x, y)}
                   onDragEnd={(x, y) => handleObjectDragEnd(obj.id, x, y)}
                   onDblClick={() => setEditingId(obj.id)}
@@ -660,6 +703,7 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
                   obj={obj}
                   isSelected={isSelected}
                   onSelect={(e) => handleObjectSelect(obj.id, e)}
+                  onDragStart={beginTransaction}
                   onDragMove={(x, y) => handleDragMove(obj.id, x, y)}
                   onDragEnd={(x, y) => handleObjectDragEnd(obj.id, x, y)}
                 />
@@ -673,6 +717,7 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
                   obj={obj}
                   isSelected={isSelected}
                   onSelect={(e) => handleObjectSelect(obj.id, e)}
+                  onDragStart={beginTransaction}
                   onDragMove={(x, y) => handleDragMove(obj.id, x, y)}
                   onDragEnd={(x, y) => handleObjectDragEnd(obj.id, x, y)}
                 />
@@ -686,6 +731,7 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
                   obj={obj}
                   isSelected={isSelected}
                   onSelect={(e) => handleObjectSelect(obj.id, e)}
+                  onDragStart={beginTransaction}
                   onDragMove={(x, y) => handleDragMove(obj.id, x, y)}
                   onDragEnd={(x, y) => handleObjectDragEnd(obj.id, x, y)}
                 />
@@ -699,6 +745,7 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
                   obj={obj}
                   isSelected={isSelected}
                   onSelect={(e) => handleObjectSelect(obj.id, e)}
+                  onDragStart={beginTransaction}
                   onDragMove={(x, y) => handleDragMove(obj.id, x, y)}
                   onDragEnd={(x, y) => handleObjectDragEnd(obj.id, x, y)}
                   onDblClick={() => setEditingId(obj.id)}
@@ -720,10 +767,12 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
           {selectionBounds && selectedIds.length > 0 && (
             <TransformHandles
               bounds={selectionBounds}
+              onResizeStart={beginTransaction}
               onResize={handleObjectResize}
-              onResizeEnd={handleObjectResize}
+              onResizeEnd={handleObjectResizeEnd}
+              onRotateStart={beginTransaction}
               onRotate={handleObjectRotate}
-              onRotateEnd={handleObjectRotate}
+              onRotateEnd={handleObjectRotateEnd}
             />
           )}
           <SnapGuides guides={snapGuides} />
