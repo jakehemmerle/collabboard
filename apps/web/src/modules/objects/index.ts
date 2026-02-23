@@ -205,6 +205,14 @@ export const objectsModule: AppModule<ObjectsApi> = {
         }
       },
 
+      canUndo() {
+        return undoManager.canUndo();
+      },
+
+      canRedo() {
+        return undoManager.canRedo();
+      },
+
       hydrateFromSnapshot(objects: BoardObject[]) {
         store.hydrateFromSnapshot(objects);
         selectedIds = [];

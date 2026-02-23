@@ -150,6 +150,8 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
     updateFrameChildren,
     undo,
     redo,
+    canUndo,
+    canRedo,
     toggleReaction,
   } = useObjects();
 
@@ -781,6 +783,10 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
 
       <ZoomControls
         camera={camera}
+        canUndo={canUndo}
+        canRedo={canRedo}
+        onUndo={undo}
+        onRedo={redo}
         onZoomIn={zoomIn}
         onZoomOut={zoomOut}
         onResetView={resetView}

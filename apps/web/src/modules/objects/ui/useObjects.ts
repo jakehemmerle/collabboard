@@ -147,6 +147,8 @@ export function useObjects() {
     updateFrameChildren,
     undo,
     redo,
+    canUndo: getApi().canUndo(),
+    canRedo: getApi().canRedo(),
     toggleReaction,
   };
 }

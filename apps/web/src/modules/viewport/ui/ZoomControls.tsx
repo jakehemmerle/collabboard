@@ -2,6 +2,10 @@ import type { Camera } from '../contracts.ts';
 
 interface ZoomControlsProps {
   camera: Camera;
+  canUndo: boolean;
+  canRedo: boolean;
+  onUndo: () => void;
+  onRedo: () => void;
   onZoomIn: () => void;
   onZoomOut: () => void;
   onResetView: () => void;
@@ -36,6 +40,11 @@ const buttonStyle: React.CSSProperties = {
   borderRadius: 4,
 };
 
+const disabledButtonStyle: React.CSSProperties = {
+  opacity: 0.4,
+  cursor: 'not-allowed',
+};
+
 const percentStyle: React.CSSProperties = {
   fontSize: 11,
   color: '#666',
@@ -50,9 +59,36 @@ const dividerStyle: React.CSSProperties = {
   margin: '2px 0',
 };
 
-export function ZoomControls({ camera, onZoomIn, onZoomOut, onResetView, onFitContent }: ZoomControlsProps) {
+export function ZoomControls({
+  camera,
+  canUndo,
+  canRedo,
+  onUndo,
+  onRedo,
+  onZoomIn,
+  onZoomOut,
+  onResetView,
+  onFitContent,
+}: ZoomControlsProps) {
   return (
     <div style={containerStyle}>
+      <button
+        style={{ ...buttonStyle, ...(canUndo ? {} : disabledButtonStyle) }}
+        onClick={onUndo}
+        disabled={!canUndo}
+        title="Undo (Cmd/Ctrl+Z)"
+      >
+        ↶
+      </button>
+      <button
+        style={{ ...buttonStyle, ...(canRedo ? {} : disabledButtonStyle) }}
+        onClick={onRedo}
+        disabled={!canRedo}
+        title="Redo (Cmd/Ctrl+Shift+Z)"
+      >
+        ↷
+      </button>
+      <div style={dividerStyle} />
       <button style={buttonStyle} onClick={onZoomIn} title="Zoom in">
         +
       </button>

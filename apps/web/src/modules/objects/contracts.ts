@@ -139,6 +139,8 @@ export interface ObjectsApi {
   getSnapshot(): ObjectsState;
   undo(): void;
   redo(): void;
+  canUndo(): boolean;
+  canRedo(): boolean;
   observeObjects(cb: (state: ObjectsState) => void): () => void;
   toggleReaction(objectId: string, emoji: string): void;
 }
