@@ -7,12 +7,14 @@ interface BackgroundGridProps {
   camera: Camera;
   width: number;
   height: number;
+  gridDotColor?: string;
 }
 
 export const BackgroundGrid = React.memo(function BackgroundGrid({
   camera,
   width,
   height,
+  gridDotColor = '#ccc',
 }: BackgroundGridProps) {
   const dots = useMemo(() => {
     // Adaptive spacing: double at low zoom, quadruple at very low zoom
@@ -44,7 +46,7 @@ export const BackgroundGrid = React.memo(function BackgroundGrid({
             x={x}
             y={y}
             radius={radius}
-            fill="#ccc"
+            fill={gridDotColor}
             listening={false}
             perfectDrawEnabled={false}
           />,
@@ -53,7 +55,7 @@ export const BackgroundGrid = React.memo(function BackgroundGrid({
     }
 
     return result;
-  }, [camera.x, camera.y, camera.scale, width, height]);
+  }, [camera.x, camera.y, camera.scale, width, height, gridDotColor]);
 
   return <Layer listening={false}>{dots}</Layer>;
 });

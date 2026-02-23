@@ -1,4 +1,5 @@
 import { useEffect, useMemo } from 'react';
+import { v } from '../theme/theme-utils.ts';
 
 interface ShortcutHelpProps {
   open: boolean;
@@ -107,14 +108,14 @@ const backdropStyle: React.CSSProperties = {
 };
 
 const modalStyle: React.CSSProperties = {
-  background: '#fff',
+  background: v('--cb-bg-surface'),
   borderRadius: 12,
   padding: 24,
   maxWidth: 480,
   width: '90%',
   maxHeight: '80vh',
   overflowY: 'auto',
-  boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
+  boxShadow: v('--cb-shadow-lg'),
 };
 
 const titleStyle: React.CSSProperties = {
@@ -124,6 +125,7 @@ const titleStyle: React.CSSProperties = {
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'center',
+  color: v('--cb-text-primary'),
 };
 
 const closeBtnStyle: React.CSSProperties = {
@@ -131,13 +133,13 @@ const closeBtnStyle: React.CSSProperties = {
   border: 'none',
   fontSize: 20,
   cursor: 'pointer',
-  color: '#999',
+  color: v('--cb-text-tertiary'),
 };
 
 const sectionHeaderStyle: React.CSSProperties = {
   fontSize: 13,
   fontWeight: 600,
-  color: '#999',
+  color: v('--cb-text-tertiary'),
   textTransform: 'uppercase',
   letterSpacing: 1,
   marginTop: 16,
@@ -149,14 +151,15 @@ const rowStyle: React.CSSProperties = {
   justifyContent: 'space-between',
   padding: '4px 0',
   fontSize: 14,
+  color: v('--cb-text-primary'),
 };
 
 const kbdStyle: React.CSSProperties = {
-  background: '#f5f5f5',
-  border: '1px solid #ddd',
+  background: v('--cb-bg-surface-raised'),
+  border: `1px solid ${v('--cb-border-default')}`,
   borderRadius: 4,
   padding: '2px 8px',
   fontFamily: 'monospace',
   fontSize: 12,
-  color: '#333',
+  color: v('--cb-text-primary'),
 };

@@ -1,5 +1,6 @@
 import type { BoardObjectType, StickyColor } from '../contracts.ts';
 import { STICKY_COLORS } from '../contracts.ts';
+import { v } from '../../../shared/theme/theme-utils.ts';
 
 interface ToolbarProps {
   selectedType: BoardObjectType | null;
@@ -69,7 +70,7 @@ export function Toolbar({
       <div style={dividerStyle} />
       <button
         onClick={onCreateConnector}
-        style={{ ...btnStyle, ...(connectorMode ? { background: '#E3F2FD', borderColor: '#2196F3' } : {}) }}
+        style={{ ...btnStyle, ...(connectorMode ? { background: v('--cb-primary-light'), borderColor: v('--cb-primary-surface') } : {}) }}
         title="Add Connector (click source, then target)"
       >
         ↗ Connector
@@ -118,7 +119,7 @@ export function Toolbar({
               ⧉ Duplicate
             </button>
           )}
-          <button onClick={onDelete} style={{ ...btnStyle, color: '#D32F2F' }} title="Delete">
+          <button onClick={onDelete} style={{ ...btnStyle, color: v('--cb-error') }} title="Delete">
             ✕ Delete
           </button>
         </>
@@ -136,26 +137,27 @@ const toolbarStyle: React.CSSProperties = {
   alignItems: 'center',
   gap: 6,
   padding: '6px 12px',
-  background: '#fff',
-  border: '1px solid #ddd',
+  background: v('--cb-bg-surface'),
+  border: `1px solid ${v('--cb-border-default')}`,
   borderRadius: 8,
-  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+  boxShadow: v('--cb-shadow-sm'),
   zIndex: 10,
 };
 
 const btnStyle: React.CSSProperties = {
   padding: '6px 12px',
   background: 'none',
-  border: '1px solid #ddd',
+  border: `1px solid ${v('--cb-border-default')}`,
   borderRadius: 4,
   cursor: 'pointer',
   fontSize: 13,
+  color: v('--cb-text-primary'),
 };
 
 const colorBtnStyle: React.CSSProperties = {
   width: 24,
   height: 24,
-  border: '1px solid #ccc',
+  border: `1px solid ${v('--cb-border-strong')}`,
   borderRadius: 4,
   cursor: 'pointer',
   padding: 0,
@@ -164,6 +166,6 @@ const colorBtnStyle: React.CSSProperties = {
 const dividerStyle: React.CSSProperties = {
   width: 1,
   height: 24,
-  backgroundColor: '#ddd',
+  backgroundColor: v('--cb-border-default'),
   margin: '0 4px',
 };

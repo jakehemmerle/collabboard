@@ -39,6 +39,9 @@ import { subscribeToChatMessages, persistChatMessages } from '../../modules/ai-a
 import type { UIMessage } from 'ai';
 import { ShortcutHelp } from '../../shared/ui/ShortcutHelp.tsx';
 import { ToastContainer } from '../../shared/ui/ToastContainer.tsx';
+import { v } from '../../shared/theme/theme-utils.ts';
+import { useTheme } from '../../shared/theme/useTheme.ts';
+import { ThemeToggle } from '../../shared/ui/ThemeToggle.tsx';
 import { SelectionBar } from '../../modules/objects/ui/SelectionBar.tsx';
 import { SnapGuides } from '../../modules/objects/ui/SnapGuides.tsx';
 import { computeSnapGuides } from '../../modules/objects/domain/snap-guides.ts';
@@ -123,6 +126,8 @@ export function BoardPage() {
 
 function BoardCanvas({ boardId, width, height }: { boardId: string; width: number; height: number }) {
   const { user } = useAuth();
+  const { resolveToken } = useTheme();
+  const gridDotColor = resolveToken('--cb-grid-dot');
   const { camera, stageProps, stageRef, resetView, zoomIn, zoomOut, fitContent } = useViewport();
   const {
     objects,
@@ -594,7 +599,7 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
         onMouseMove={handleMouseMove}
         onDblClick={handleStageDblClick}
       >
-        <BackgroundGrid camera={camera} width={width} height={height} />
+        <BackgroundGrid camera={camera} width={width} height={height} gridDotColor={gridDotColor} />
         <Layer>
           {/* Frames render first (behind everything) — only visible ones */}
           {visibleObjects.filter((o) => o.type === 'frame').map((obj) => {
@@ -768,9 +773,9 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
           top: 16,
           left: 16,
           padding: '8px 16px',
-          background: copied ? '#4CAF50' : '#fff',
-          color: copied ? '#fff' : '#333',
-          border: '1px solid #ccc',
+          background: copied ? v('--cb-success') : v('--cb-bg-surface'),
+          color: copied ? v('--cb-text-on-primary') : v('--cb-text-primary'),
+          border: `1px solid ${v('--cb-border-strong')}`,
           borderRadius: 4,
           cursor: 'pointer',
           fontSize: 14,
@@ -793,6 +798,10 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
         onFitContent={() => fitContent(objects, width, height)}
       />
 
+      <div style={{ position: 'absolute', bottom: 16, right: 60, zIndex: 10 }}>
+        <ThemeToggle />
+      </div>
+
       <Minimap
         objects={objects}
         camera={camera}
@@ -809,11 +818,11 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
             left: '50%',
             transform: 'translateX(-50%)',
             padding: '8px 16px',
-            background: '#E3F2FD',
-            border: '1px solid #2196F3',
+            background: v('--cb-primary-light'),
+            border: `1px solid ${v('--cb-primary-surface')}`,
             borderRadius: 4,
             fontSize: 14,
-            color: '#1565C0',
+            color: v('--cb-primary'),
             zIndex: 10,
           }}
         >
@@ -822,7 +831,7 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
             : 'Click source object to start connector'}
           <button
             onClick={() => { setConnectorMode(false); setConnectorSourceId(null); }}
-            style={{ marginLeft: 8, background: 'none', border: 'none', cursor: 'pointer', color: '#D32F2F', fontSize: 14 }}
+            style={{ marginLeft: 8, background: 'none', border: 'none', cursor: 'pointer', color: v('--cb-error'), fontSize: 14 }}
           >
             Cancel
           </button>
@@ -863,7 +872,7 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
 
 function CenteredMessage({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', fontSize: 18, color: '#666' }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', fontSize: 18, color: v('--cb-text-secondary') }}>
       {children}
     </div>
   );

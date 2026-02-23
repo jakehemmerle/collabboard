@@ -1,3 +1,5 @@
+import { v } from '../../../shared/theme/theme-utils.ts';
+
 interface SelectionBarProps {
   selectedCount: number;
   onAlignLeft: () => void;
@@ -54,15 +56,15 @@ const barStyle: React.CSSProperties = {
   alignItems: 'center',
   gap: 6,
   padding: '6px 12px',
-  background: '#fff',
-  border: '1px solid #ddd',
+  background: v('--cb-bg-surface'),
+  border: `1px solid ${v('--cb-border-default')}`,
   borderRadius: 8,
-  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+  boxShadow: v('--cb-shadow-sm'),
 };
 
 const countStyle: React.CSSProperties = {
   fontSize: 13,
-  color: '#666',
+  color: v('--cb-text-secondary'),
 };
 
 const iconBtnStyle: React.CSSProperties = {
@@ -76,11 +78,12 @@ const iconBtnStyle: React.CSSProperties = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
+  color: v('--cb-text-primary'),
 };
 
 const dividerStyle: React.CSSProperties = {
   width: 1,
   height: 24,
-  backgroundColor: '#ddd',
+  backgroundColor: v('--cb-border-default'),
   margin: '0 4px',
 };

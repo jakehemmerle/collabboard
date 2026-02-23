@@ -3,6 +3,7 @@ import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
 import type { UIMessage } from 'ai';
 import { AiMessageBubble } from './AiMessageBubble.tsx';
+import { v } from '../../../shared/theme/theme-utils.ts';
 import { getModuleApi } from '../../../app/module-registry.ts';
 import { AI_AGENT_MODULE_ID } from '../index.ts';
 import { AUTH_MODULE_ID } from '../../auth/index.ts';
@@ -92,15 +93,15 @@ export function AiChatPanel({ boardId, initialMessages, onNewMessages }: AiChatP
           width: 48,
           height: 48,
           borderRadius: '50%',
-          background: '#1976D2',
-          color: '#fff',
+          background: v('--cb-primary'),
+          color: v('--cb-text-on-primary'),
           border: 'none',
           cursor: 'pointer',
           fontSize: 20,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+          boxShadow: v('--cb-shadow-sm'),
           zIndex: 20,
         }}
         title="Open AI Chat"
@@ -118,9 +119,9 @@ export function AiChatPanel({ boardId, initialMessages, onNewMessages }: AiChatP
         left: 16,
         width: 380,
         height: 500,
-        background: '#fff',
+        background: v('--cb-bg-surface'),
         borderRadius: 12,
-        boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+        boxShadow: v('--cb-shadow-md'),
         display: 'flex',
         flexDirection: 'column',
         zIndex: 20,
@@ -131,12 +132,12 @@ export function AiChatPanel({ boardId, initialMessages, onNewMessages }: AiChatP
       <div
         style={{
           padding: '12px 16px',
-          borderBottom: '1px solid #eee',
+          borderBottom: `1px solid ${v('--cb-border-subtle')}`,
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          background: '#1976D2',
-          color: '#fff',
+          background: v('--cb-primary'),
+          color: v('--cb-text-on-primary'),
         }}
       >
         <span style={{ fontWeight: 600, fontSize: 14 }}>AI Assistant</span>
@@ -145,7 +146,7 @@ export function AiChatPanel({ boardId, initialMessages, onNewMessages }: AiChatP
           style={{
             background: 'none',
             border: 'none',
-            color: '#fff',
+            color: v('--cb-text-on-primary'),
             cursor: 'pointer',
             fontSize: 18,
             padding: '0 4px',
@@ -164,7 +165,7 @@ export function AiChatPanel({ boardId, initialMessages, onNewMessages }: AiChatP
         }}
       >
         {messages.length === 0 && (
-          <div style={{ color: '#999', fontSize: 13, textAlign: 'center', marginTop: 40 }}>
+          <div style={{ color: v('--cb-text-tertiary'), fontSize: 13, textAlign: 'center', marginTop: 40 }}>
             Ask me to create objects, organize the board, or build templates.
             <br /><br />
             Try: &quot;Create a SWOT analysis&quot;
@@ -174,7 +175,7 @@ export function AiChatPanel({ boardId, initialMessages, onNewMessages }: AiChatP
           <AiMessageBubble key={m.id} message={m} />
         ))}
         {isLoading && (
-          <div style={{ color: '#999', fontSize: 13, fontStyle: 'italic', padding: '4px 0' }}>
+          <div style={{ color: v('--cb-text-tertiary'), fontSize: 13, fontStyle: 'italic', padding: '4px 0' }}>
             Thinking...
           </div>
         )}
@@ -182,11 +183,11 @@ export function AiChatPanel({ boardId, initialMessages, onNewMessages }: AiChatP
           <div style={{
             padding: '8px 12px',
             margin: '4px 0',
-            background: '#FFF3F3',
-            border: '1px solid #FFCDD2',
+            background: v('--cb-error-light'),
+            border: `1px solid ${v('--cb-error-border')}`,
             borderRadius: 8,
             fontSize: 13,
-            color: '#D32F2F',
+            color: v('--cb-error'),
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
@@ -197,7 +198,7 @@ export function AiChatPanel({ boardId, initialMessages, onNewMessages }: AiChatP
               style={{
                 background: 'none',
                 border: 'none',
-                color: '#D32F2F',
+                color: v('--cb-error'),
                 cursor: 'pointer',
                 fontSize: 16,
                 padding: '0 4px',
@@ -215,7 +216,7 @@ export function AiChatPanel({ boardId, initialMessages, onNewMessages }: AiChatP
         onSubmit={handleSubmit}
         style={{
           padding: '8px 12px',
-          borderTop: '1px solid #eee',
+          borderTop: `1px solid ${v('--cb-border-subtle')}`,
           display: 'flex',
           gap: 8,
         }}
@@ -228,10 +229,12 @@ export function AiChatPanel({ boardId, initialMessages, onNewMessages }: AiChatP
           style={{
             flex: 1,
             padding: '8px 12px',
-            border: '1px solid #ddd',
+            border: `1px solid ${v('--cb-input-border')}`,
             borderRadius: 8,
             fontSize: 14,
             outline: 'none',
+            background: v('--cb-input-bg'),
+            color: v('--cb-text-primary'),
           }}
         />
         <button
@@ -239,8 +242,8 @@ export function AiChatPanel({ boardId, initialMessages, onNewMessages }: AiChatP
           disabled={!inputValue.trim() || !functionUrl || isLoading}
           style={{
             padding: '8px 16px',
-            background: !inputValue.trim() || !functionUrl || isLoading ? '#ccc' : '#1976D2',
-            color: '#fff',
+            background: !inputValue.trim() || !functionUrl || isLoading ? v('--cb-input-disabled-bg') : v('--cb-primary'),
+            color: v('--cb-text-on-primary'),
             border: 'none',
             borderRadius: 8,
             cursor: !inputValue.trim() || !functionUrl || isLoading ? 'default' : 'pointer',

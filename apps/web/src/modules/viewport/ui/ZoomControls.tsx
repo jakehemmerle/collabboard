@@ -1,4 +1,5 @@
 import type { Camera } from '../contracts.ts';
+import { v } from '../../../shared/theme/theme-utils.ts';
 
 interface ZoomControlsProps {
   camera: Camera;
@@ -17,10 +18,10 @@ const containerStyle: React.CSSProperties = {
   bottom: 16,
   right: 16,
   zIndex: 10,
-  background: '#fff',
-  border: '1px solid #ddd',
+  background: v('--cb-bg-surface'),
+  border: `1px solid ${v('--cb-border-default')}`,
   borderRadius: 8,
-  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+  boxShadow: v('--cb-shadow-sm'),
   display: 'flex',
   flexDirection: 'column',
   alignItems: 'center',
@@ -38,6 +39,7 @@ const buttonStyle: React.CSSProperties = {
   alignItems: 'center',
   justifyContent: 'center',
   borderRadius: 4,
+  color: v('--cb-text-primary'),
 };
 
 const disabledButtonStyle: React.CSSProperties = {
@@ -47,7 +49,7 @@ const disabledButtonStyle: React.CSSProperties = {
 
 const percentStyle: React.CSSProperties = {
   fontSize: 11,
-  color: '#666',
+  color: v('--cb-text-secondary'),
   padding: '2px 0',
   userSelect: 'none',
 };
@@ -55,7 +57,7 @@ const percentStyle: React.CSSProperties = {
 const dividerStyle: React.CSSProperties = {
   width: 24,
   height: 1,
-  background: '#ddd',
+  background: v('--cb-border-default'),
   margin: '2px 0',
 };
 

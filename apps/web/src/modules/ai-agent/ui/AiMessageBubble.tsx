@@ -1,6 +1,7 @@
 import { memo } from 'react';
 import type { UIMessage } from 'ai';
 import Markdown from 'react-markdown';
+import { v } from '../../../shared/theme/theme-utils.ts';
 
 interface AiMessageBubbleProps {
   message: UIMessage;
@@ -104,8 +105,8 @@ export const AiMessageBubble = memo(function AiMessageBubble({ message }: AiMess
           maxWidth: '85%',
           padding: '8px 12px',
           borderRadius: 12,
-          background: isUser ? '#1976D2' : '#F5F5F5',
-          color: isUser ? '#fff' : '#333',
+          background: isUser ? v('--cb-primary') : v('--cb-bg-surface-raised'),
+          color: isUser ? v('--cb-text-on-primary') : v('--cb-text-primary'),
           fontSize: 14,
           lineHeight: 1.5,
           wordBreak: 'break-word',
@@ -160,7 +161,7 @@ export const AiMessageBubble = memo(function AiMessageBubble({ message }: AiMess
                 key={i}
                 style={{
                   fontSize: 12,
-                  color: isError ? '#D32F2F' : isUser ? '#B3D4FC' : '#999',
+                  color: isError ? v('--cb-error') : isUser ? '#B3D4FC' : v('--cb-text-tertiary'),
                   fontStyle: 'italic',
                   margin: '4px 0',
                 }}

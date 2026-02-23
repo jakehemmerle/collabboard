@@ -1,11 +1,12 @@
 import { usePresence } from './usePresence.ts';
+import { v } from '../../../shared/theme/theme-utils.ts';
 
 const rosterStyle: React.CSSProperties = {
   position: 'absolute',
   top: 16,
   right: 16,
-  background: '#fff',
-  border: '1px solid #ddd',
+  background: v('--cb-bg-surface'),
+  border: `1px solid ${v('--cb-border-default')}`,
   borderRadius: 8,
   padding: '8px 12px',
   display: 'flex',
@@ -13,7 +14,7 @@ const rosterStyle: React.CSSProperties = {
   gap: 6,
   fontSize: 13,
   fontFamily: 'sans-serif',
-  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+  boxShadow: v('--cb-shadow-sm'),
   zIndex: 10,
   maxHeight: 300,
   overflowY: 'auto' as const,
@@ -21,7 +22,7 @@ const rosterStyle: React.CSSProperties = {
 
 const headerStyle: React.CSSProperties = {
   fontWeight: 600,
-  color: '#555',
+  color: v('--cb-text-secondary'),
   marginBottom: 2,
 };
 
@@ -42,7 +43,7 @@ function dotStyle(color: string): React.CSSProperties {
 }
 
 const nameStyle: React.CSSProperties = {
-  color: '#333',
+  color: v('--cb-text-primary'),
   whiteSpace: 'nowrap',
   overflow: 'hidden',
   textOverflow: 'ellipsis',

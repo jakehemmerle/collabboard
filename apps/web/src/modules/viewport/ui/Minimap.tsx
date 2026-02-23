@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback } from 'react';
 import type { BoardObject } from '../../objects/contracts.ts';
 import { STICKY_COLORS } from '../../objects/contracts.ts';
 import type { Camera } from '../contracts.ts';
+import { v } from '../../../shared/theme/theme-utils.ts';
 
 interface MinimapProps {
   objects: BoardObject[];
@@ -172,10 +173,10 @@ const containerStyle: React.CSSProperties = {
   bottom: 70,
   left: 16,
   zIndex: 10,
-  background: '#fff',
-  border: '1px solid #ddd',
+  background: v('--cb-bg-surface'),
+  border: `1px solid ${v('--cb-border-default')}`,
   borderRadius: 8,
-  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+  boxShadow: v('--cb-shadow-sm'),
   overflow: 'hidden',
   padding: 4,
 };
@@ -189,13 +190,13 @@ const collapsedContainerStyle: React.CSSProperties = {
 
 const toggleButtonStyle: React.CSSProperties = {
   padding: '6px 12px',
-  background: '#fff',
-  border: '1px solid #ddd',
+  background: v('--cb-bg-surface'),
+  border: `1px solid ${v('--cb-border-default')}`,
   borderRadius: 8,
   cursor: 'pointer',
   fontSize: 12,
-  color: '#666',
-  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+  color: v('--cb-text-secondary'),
+  boxShadow: v('--cb-shadow-sm'),
 };
 
 const collapseButtonStyle: React.CSSProperties = {
@@ -209,7 +210,7 @@ const collapseButtonStyle: React.CSSProperties = {
   border: 'none',
   cursor: 'pointer',
   fontSize: 12,
-  color: '#999',
+  color: v('--cb-text-tertiary'),
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',

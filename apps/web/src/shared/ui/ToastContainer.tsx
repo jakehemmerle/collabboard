@@ -1,10 +1,11 @@
 import { useSyncExternalStore } from 'react';
 import { subscribeToasts, getToasts, removeToast } from './toast-store.ts';
+import { v } from '../theme/theme-utils.ts';
 
 const typeStyles: Record<'success' | 'info' | 'error', React.CSSProperties> = {
-  success: { background: '#4CAF50' },
-  info: { background: '#333' },
-  error: { background: '#D32F2F' },
+  success: { background: v('--cb-success') },
+  info: { background: v('--cb-text-primary') },
+  error: { background: v('--cb-error') },
 };
 
 const containerStyle: React.CSSProperties = {
@@ -25,11 +26,11 @@ const toastStyle: React.CSSProperties = {
   padding: '10px 20px',
   borderRadius: 8,
   fontSize: 14,
-  color: '#fff',
+  color: v('--cb-text-on-primary'),
   display: 'flex',
   alignItems: 'center',
   gap: 12,
-  boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+  boxShadow: v('--cb-shadow-md'),
 };
 
 const closeStyle: React.CSSProperties = {

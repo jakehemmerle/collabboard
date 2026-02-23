@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { StickyNote, TextObject, FrameObject } from '../contracts.ts';
 import { STICKY_COLORS } from '../contracts.ts';
 import type { Camera } from '../../viewport/contracts.ts';
+import { v } from '../../../shared/theme/theme-utils.ts';
 
 interface TextEditorProps {
   obj: StickyNote | TextObject | FrameObject;
@@ -58,12 +59,12 @@ export function TextEditor({ obj, camera, onSave, onCancel }: TextEditorProps) {
         width: scaledWidth,
         height: Math.max(scaledHeight, 40 * camera.scale),
         background: bgColor,
-        border: '2px solid #2196F3',
+        border: `2px solid ${v('--cb-selection-border')}`,
         borderRadius: isSticky ? 8 * camera.scale : 2,
         padding: isSticky ? 12 * camera.scale : 4 * camera.scale,
         fontSize: fontSize * camera.scale,
         fontFamily: 'sans-serif',
-        color: '#333',
+        color: v('--cb-text-primary'),
         resize: 'none',
         outline: 'none',
         boxSizing: 'border-box',
