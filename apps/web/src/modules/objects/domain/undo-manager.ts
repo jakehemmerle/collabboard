@@ -8,7 +8,6 @@ class UndoManager {
   private inTransaction = false;
 
   beginTransaction(objects: BoardObject[]): void {
-    if (this.inTransaction) return;
     this.inTransaction = true;
     this.undoStack.push(structuredClone(objects));
     if (this.undoStack.length > MAX_STACK_DEPTH) {
@@ -31,12 +30,14 @@ class UndoManager {
   }
 
   undo(currentObjects: BoardObject[]): BoardObject[] | null {
+    this.inTransaction = false;
     if (this.undoStack.length === 0) return null;
     this.redoStack.push(structuredClone(currentObjects));
     return this.undoStack.pop()!;
   }
 
   redo(currentObjects: BoardObject[]): BoardObject[] | null {
+    this.inTransaction = false;
     if (this.redoStack.length === 0) return null;
     this.undoStack.push(structuredClone(currentObjects));
     return this.redoStack.pop()!;

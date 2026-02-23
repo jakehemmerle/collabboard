@@ -349,24 +349,9 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
 
   // Resize end handler: applies final bounds and commits the transaction
   const handleObjectResizeEnd = useCallback((newBounds: BoundingBox) => {
-    if (!selectionBounds || selectedObjs.length === 0) return;
-
-    if (selectedObjs.length === 1) {
-      const obj = selectedObjs[0];
-      moveObject(obj.id, newBounds.x, newBounds.y);
-      resizeObject(obj.id, newBounds.width, newBounds.height);
-    } else {
-      const scaleX = selectionBounds.width > 0 ? newBounds.width / selectionBounds.width : 1;
-      const scaleY = selectionBounds.height > 0 ? newBounds.height / selectionBounds.height : 1;
-      for (const obj of selectedObjs) {
-        const relX = obj.x - selectionBounds.x;
-        const relY = obj.y - selectionBounds.y;
-        moveObject(obj.id, newBounds.x + relX * scaleX, newBounds.y + relY * scaleY);
-        resizeObject(obj.id, obj.width * scaleX, obj.height * scaleY);
-      }
-    }
+    handleObjectResize(newBounds);
     commitTransaction();
-  }, [selectedObjs, selectionBounds, moveObject, resizeObject, commitTransaction]);
+  }, [handleObjectResize, commitTransaction]);
 
   // Rotation handler
   const handleObjectRotate = useCallback((rotation: number) => {
@@ -377,11 +362,9 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
 
   // Rotation end handler: applies final rotation and commits the transaction
   const handleObjectRotateEnd = useCallback((rotation: number) => {
-    for (const obj of selectedObjs) {
-      rotateObject(obj.id, rotation);
-    }
+    handleObjectRotate(rotation);
     commitTransaction();
-  }, [selectedObjs, rotateObject, commitTransaction]);
+  }, [handleObjectRotate, commitTransaction]);
 
   const editingObj = editingId !== null
     ? (objects.find((o) => o.id === editingId && (o.type === 'sticky' || o.type === 'text' || o.type === 'frame')) as StickyNote | TextObject | FrameObject | undefined)
@@ -490,6 +473,7 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
 
   // Recompute frame children after frame drag ends
   function handleFrameDragEnd(frameId: string, x: number, y: number) {
+    dragBufferRef.current.delete(frameId);
     moveObject(frameId, x, y);
     setSnapGuides([]);
     recomputeAllFrameChildren();
@@ -498,6 +482,7 @@ function BoardCanvas({ boardId, width, height }: { boardId: string; width: numbe
 
   // Regular object drag end: move then recompute frame children
   function handleObjectDragEnd(objectId: string, x: number, y: number) {
+    dragBufferRef.current.delete(objectId);
     moveObject(objectId, x, y);
     setSnapGuides([]);
     recomputeAllFrameChildren();
