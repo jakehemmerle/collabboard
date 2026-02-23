@@ -21,6 +21,47 @@ let selectedIds: string[] = [];
 // Track pending local writes per objectId (count-based so multiple writes each get their echo suppressed)
 const pendingLocalOps = new Map<string, number>();
 
+function getSyncApiOrNull(): SyncApi | null {
+  try {
+    return getModuleApi<SyncApi>('sync');
+  } catch {
+    // sync not available yet
+    return null;
+  }
+}
+
+function areObjectsEqual(a: BoardObject, b: BoardObject): boolean {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
+function publishSnapshotDelta(prev: BoardObject[], next: BoardObject[]): void {
+  const syncApi = getSyncApiOrNull();
+  if (!syncApi) return;
+
+  const prevById = new Map(prev.map((obj) => [obj.id, obj]));
+  const nextById = new Map(next.map((obj) => [obj.id, obj]));
+  const allIds = new Set([...prevById.keys(), ...nextById.keys()]);
+
+  for (const objectId of allIds) {
+    const prevObj = prevById.get(objectId);
+    const nextObj = nextById.get(objectId);
+    const changed = !prevObj || !nextObj || !areObjectsEqual(prevObj, nextObj);
+    if (!changed) continue;
+
+    pendingLocalOps.set(objectId, (pendingLocalOps.get(objectId) ?? 0) + 1);
+
+    if (!nextObj) {
+      syncApi.publish(objectId, null).catch((err) => {
+        console.error('[Objects] Sync publish failed:', err);
+      });
+    } else {
+      syncApi.publish(objectId, { ...nextObj } as unknown as Record<string, unknown>).catch((err) => {
+        console.error('[Objects] Sync publish failed:', err);
+      });
+    }
+  }
+}
+
 function getState(): ObjectsState {
   return { objects: store.getAllObjects(), selectedIds };
 }
@@ -51,12 +92,7 @@ export const objectsModule: AppModule<ObjectsApi> = {
           const idsToSync = result.objectIds ?? (result.objectId ? [result.objectId] : []);
 
           if (idsToSync.length > 0) {
-            let syncApi: SyncApi | null = null;
-            try {
-              syncApi = getModuleApi<SyncApi>('sync');
-            } catch {
-              // sync not available yet
-            }
+            const syncApi = getSyncApiOrNull();
 
             for (const oid of idsToSync) {
               pendingLocalOps.set(oid, (pendingLocalOps.get(oid) ?? 0) + 1);
@@ -152,7 +188,9 @@ export const objectsModule: AppModule<ObjectsApi> = {
       undo() {
         const result = undoManager.undo(store.getAllObjects());
         if (result) {
+          const previous = store.getAllObjects();
           store.hydrateFromSnapshot(result);
+          publishSnapshotDelta(previous, result);
           emitChange();
         }
       },
@@ -160,7 +198,9 @@ export const objectsModule: AppModule<ObjectsApi> = {
       redo() {
         const result = undoManager.redo(store.getAllObjects());
         if (result) {
+          const previous = store.getAllObjects();
           store.hydrateFromSnapshot(result);
+          publishSnapshotDelta(previous, result);
           emitChange();
         }
       },
