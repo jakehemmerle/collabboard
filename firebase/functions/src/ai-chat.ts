@@ -21,11 +21,9 @@ const db = getFirestore();
 const anthropicKey = defineSecret('ANTHROPIC_API_KEY');
 const langsmithKey = defineSecret('LANGSMITH_API_KEY');
 
-// LangSmith client for flush control in serverless
-const langsmithClient = new Client();
-
-// Wrap AI SDK for automatic LangSmith tracing of LLM calls, tool invocations, and latency
-const { streamText } = wrapAISDK(ai, { client: langsmithClient });
+// LangSmith tracing env flags (read at trace-send time, not at Client construction)
+process.env.LANGSMITH_TRACING ??= 'true';
+process.env.LANGSMITH_PROJECT ??= 'collabboard';
 
 export const aiChat = onRequest(
   {
@@ -75,6 +73,13 @@ export const aiChat = onRequest(
       res.status(500).json({ error: 'ANTHROPIC_API_KEY not configured' });
       return;
     }
+
+    // Create LangSmith client inside the handler where Firebase secrets are available.
+    // The Client caches apiKey at construction — at module-load time, secrets aren't
+    // in process.env yet, so a module-level Client gets apiKey=undefined forever.
+    process.env.LANGSMITH_API_KEY = langsmithKey.value();
+    const langsmithClient = new Client({ apiKey: langsmithKey.value() });
+    const { streamText } = wrapAISDK(ai, { client: langsmithClient });
 
     try {
       const anthropic = createAnthropic({
